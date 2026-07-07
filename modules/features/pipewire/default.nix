@@ -1,6 +1,6 @@
 { ... }:
 {
-  flake.nixosModules.pipewire ={pkgs, ...}:{
+  flake.nixosModules.pipewire ={pkgs, lib, ...}:{
     environment.systemPackages = with pkgs; [
       pwvucontrol
     ];
@@ -13,7 +13,9 @@
       alsa.support32Bit = true;
       pulse.enable = true;
       jack.enable = true;
-      systemWide = true;
+      # mkDefault so hosts can opt out; system-wide PipeWire is incompatible
+      # with Jovian's Steam Deck audio (see mewoSteamdeck configuration.nix).
+      systemWide = lib.mkDefault true;
       extraConfig = {
         pipewire-pulse."20-upmix" = {
           "stream.properties" = {

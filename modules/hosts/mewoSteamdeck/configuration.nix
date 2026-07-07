@@ -52,6 +52,12 @@
         decky-loader.enable = true;
       };
 
+      # Jovian's pipewire-sysconf does `rm -rf /run/pipewire` at boot to stage
+      # the Deck's hardware profile, which deletes the system-wide daemon's
+      # socket, and the speaker DSP filter-chain only runs as a user service
+      # (BindsTo the user pipewire.service). PipeWire must run per-user here.
+      services.pipewire.systemWide = false;
+
       hostConfig.bootUpdate = {
         enable = true;
         flakePath = "/mnt/${username}/luna-config";
