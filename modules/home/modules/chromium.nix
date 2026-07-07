@@ -34,8 +34,8 @@
           })
           (chromiumExtension {
             id = "mnjggcdmjocbbbhaepdhchncahnbgone"; # SponsorBlock
-            version = "6.1.5";
-            hash = "sha256-nE5FE3Eo1jG8sT1KYjVl8JRbmAiyhN8IZObHsAIb0wY=";
+            version = "6.1.6";
+            hash = "sha256-VYf+K2qZRhAcoN3nxu/nanVcXuW21uY9/EjH9zbNtP8=";
           })
           (chromiumExtension {
             id = "gnfldmcodokkpcejgdlffnjakifemick"; # Imgur Unblocker
