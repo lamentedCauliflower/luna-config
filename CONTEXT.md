@@ -29,11 +29,21 @@ _Avoid_: big picture, gamescopeSession (the vanilla nixpkgs option — mewoSteam
 The GNOME session reached via "Switch to Desktop" in the Steam menu on mewoSteamdeck; logging out returns to Gaming Mode.
 _Avoid_: desktop environment session, KDE mode
 
+**Non-Steam Shortcut**:
+An entry in a Steam account's `shortcuts.vdf` that launches an arbitrary local program (here: chromium and librewolf) from the Steam library, including from Gaming Mode. Each entry belongs to one Steam account under `userdata/<accountID>/`; the account ID only exists after that account has logged into Steam once.
+_Avoid_: "non-steam game" (these are browsers), conflating with an installed Steam app.
+
+**Default Browser**:
+The browser that owns the system's html/http(s) handlers and the `DEFAULT_BROWSER` session variable. Chromium (ungoogled) is the Default Browser on every host; librewolf is installed alongside but never claims these handlers.
+_Avoid_: assuming the browser a user launches most is the Default Browser — default is specifically the mime/scheme handler owner.
+
 ## Relationships
 
 - The **Hermes VM** runs the Hermes Agent gateway on port 5678.
 - lunaServer reverse-proxies `hermes.luna.local` to the **Hermes VM**.
 - mewoSteamdeck boots into **Gaming Mode**; **Desktop Mode** is only reachable from inside it.
+- chromium and librewolf are each surfaced as a **Non-Steam Shortcut** on every Steam host (mewoSteamdeck, cleoDesktop, yuroLaptop).
+- chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
 
 ## Example Dialogue
 
