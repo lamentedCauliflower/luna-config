@@ -1,9 +1,15 @@
 # Secrets Migration: plaintext `secrets.nix` → sops-nix
 
-> **Status (branch `sops-migration`)**: §0 done except the lunaserver env
-> capture; §1 and §2 fully implemented (all three hosts eval). Remaining:
-> env capture, §3 deploys/verification, §4 history destruction. yurolaptop
-> recipient still missing (host was offline).
+> **Status**: migration complete. History re-initialised 2026-07-07 and
+> published to github.com/lamentedCauliflower/luna-config (public).
+> Remaining loose ends:
+> - delete the old `luna-config` repo on gitea.luna.local (server still
+>   holds the plaintext history until then)
+> - lunaserver: re-clone (from GitHub or recreated gitea) + `nh os switch`
+> - yurolaptop postponed: still on pre-sops config; add its recipient +
+>   `sops updatekeys` + re-clone before rebuilding it
+> - optional: `nix-collect-garbage -d` per host; delete
+>   `~/luna-config-git-backup-20260707.tgz` when confident
 
 Big-bang, single-day migration. Values are **kept byte-identical** (no rotation — see ADR 0002), so every service must see exactly the credential it sees today. History is destroyed at the end; nothing here changes any service-side password.
 
