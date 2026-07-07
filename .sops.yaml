@@ -1,0 +1,16 @@
+# Age recipients derived from SSH ed25519 keys via ssh-to-age (see docs/adr/0002).
+# To add a host: ssh-keyscan -t ed25519 <host> | nix run nixpkgs#ssh-to-age,
+# append below, then: nix run nixpkgs#sops -- updatekeys secrets/secrets.yaml
+keys:
+  - &admin_isaac age1z9lta34xq4lr2a3dhpc4fesnnrxypzfay0n3n9yah6fcy22urqwq9klayp
+  - &host_cleodesktop age1nq94ngufj0790sz995trgq2m66gluwar50z5k3ufk05qkg5gcfwsa8qj5d
+  - &host_lunaserver age14kkltu3y88mq3j2a2g76kxlppzj9agxgzc0869zcfyvm2st9x49qf45963
+  # TODO: yurolaptop was offline during migration — add its key and run updatekeys
+  # before deploying sops there.
+creation_rules:
+  - path_regex: secrets/.*
+    key_groups:
+      - age:
+          - *admin_isaac
+          - *host_cleodesktop
+          - *host_lunaserver
