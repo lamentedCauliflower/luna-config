@@ -21,8 +21,8 @@
         mountdPort = 4002;
         statdPort = 4000;
         exports = ''
-          /export 192.168.0.251(fsid=0,crossmnt,rw,nohide,no_subtree_check,async) 100.0.0.0/8(fsid=0,crossmnt,rw,nohide,no_subtree_check,async)
-          /export/${username} 192.168.0.251(fsid=456,rw,nohide,no_subtree_check,async) 100.0.0.0/8(fsid=456,crossmnt,rw,nohide,no_subtree_check,async)
+          /export 192.168.0.0/24(fsid=0,crossmnt,rw,nohide,no_subtree_check,async) 100.0.0.0/8(fsid=0,crossmnt,rw,nohide,no_subtree_check,async)
+          /export/${username} 192.168.0.0/24(fsid=456,rw,nohide,no_subtree_check,async) 100.0.0.0/8(fsid=456,crossmnt,rw,nohide,no_subtree_check,async)
           /export/media 192.168.0.0/24(fsid=789,rw,nohide,insecure,no_subtree_check,async) 100.0.0.0/8(fsid=789,crossmnt,rw,nohide,insecure,no_subtree_check,async)
         '';
       };
