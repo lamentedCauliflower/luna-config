@@ -3,7 +3,7 @@
   flake.nixosModules.lunaServerConfiguration =
     { pkgs, ... }:
     let
-      flakePath = "/mnt/raidDrive/${username}/luna-config";
+      flakePath = "github:lamentedCauliflower/luna-config";
     in
     {
 

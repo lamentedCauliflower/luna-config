@@ -60,7 +60,7 @@
 
       hostConfig.bootUpdate = {
         enable = true;
-        flakePath = "/mnt/${username}/luna-config";
+        flakePath = "github:lamentedCauliflower/luna-config";
       };
 
       # Only the built-in screen; hyprland is not used on this host but its
@@ -81,7 +81,7 @@
       };
 
       environment.sessionVariables = {
-        NH_FLAKE = "/mnt/${username}/luna-config";
+        NH_FLAKE = "github:lamentedCauliflower/luna-config";
       };
 
       programs.nix-index-database.comma.enable = true;

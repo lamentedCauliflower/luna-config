@@ -7,17 +7,17 @@
     in
     {
       options.hostConfig.bootUpdate = {
-        enable = lib.mkEnableOption "nh os boot --update on boot (daily, persistent)";
+        enable = lib.mkEnableOption "nh os boot on boot (daily, persistent)";
 
         flakePath = lib.mkOption {
           type = lib.types.str;
-          description = "Path to flake passed to `nh os boot --update`.";
+          description = "Flake URI passed to `nh os boot` (e.g. github:owner/repo).";
         };
       };
 
       config = lib.mkIf cfg.enable {
         systemd.services.nos-update = {
-          description = "Run nh os boot --update (set next-boot generation)";
+          description = "Run nh os boot (set next-boot generation)";
           after = [ "network-online.target" ];
           wants = [ "network-online.target" ];
 
@@ -40,8 +40,10 @@
             User = "root";
           };
 
+          # No --update: the flake is a remote GitHub URI, so the lock file
+          # cannot be rewritten here; input updates happen on the dev machine.
           script = ''
-            nh os boot --update
+            nh os boot
           '';
         };
 

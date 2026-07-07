@@ -45,7 +45,7 @@
       };
 
       environment.sessionVariables = {
-        NH_FLAKE = "/mnt/${username}/luna-config";
+        NH_FLAKE = "github:lamentedCauliflower/luna-config";
       };
 
       programs.nix-index-database.comma.enable = true;

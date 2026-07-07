@@ -44,7 +44,7 @@
 
       hostConfig.bootUpdate = {
         enable = true;
-        flakePath = "/mnt/${username}/luna-config";
+        flakePath = "github:lamentedCauliflower/luna-config";
       };
 
       home-manager.users.${username}.monitors = {
@@ -58,7 +58,7 @@
       };
 
       environment.sessionVariables = {
-        NH_FLAKE = "/mnt/${username}/luna-config";
+        NH_FLAKE = "github:lamentedCauliflower/luna-config";
       };
 
       programs.nix-index-database.comma.enable = true;
