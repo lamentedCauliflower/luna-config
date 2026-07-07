@@ -13,7 +13,7 @@ A credential (password, API key, sync key) that must never appear in the git rep
 _Avoid_: calling nix-store-visible values "secrets" — once interpolated into a built config they are public to every local user.
 
 **Recipient**:
-A key that can unlock the encrypted secrets. Recipients are the three Host Keys plus the Admin Key.
+A key that can unlock the encrypted secrets. Recipients are each host's Host Key plus the Admin Key.
 
 **Host Key**:
 A host's pre-existing SSH ed25519 identity (`/etc/ssh/ssh_host_ed25519_key`). Each host unlocks secrets with its own Host Key at activation; no extra key material is provisioned.
@@ -21,10 +21,19 @@ A host's pre-existing SSH ed25519 identity (`/etc/ssh/ssh_host_ed25519_key`). Ea
 **Admin Key**:
 Isaac's personal SSH ed25519 key (pubkey tracked as `isaac_ed25519.pub`). The only key used by a human to edit secrets.
 
+**Gaming Mode**:
+The gamescope Steam Deck UI session that mewoSteamdeck boots straight into, with no display manager or login screen.
+_Avoid_: big picture, gamescopeSession (the vanilla nixpkgs option — mewoSteamdeck uses Jovian's session instead)
+
+**Desktop Mode**:
+The GNOME session reached via "Switch to Desktop" in the Steam menu on mewoSteamdeck; logging out returns to Gaming Mode.
+_Avoid_: desktop environment session, KDE mode
+
 ## Relationships
 
 - The **Hermes VM** runs the Hermes Agent gateway on port 5678.
 - lunaServer reverse-proxies `hermes.luna.local` to the **Hermes VM**.
+- mewoSteamdeck boots into **Gaming Mode**; **Desktop Mode** is only reachable from inside it.
 
 ## Example Dialogue
 

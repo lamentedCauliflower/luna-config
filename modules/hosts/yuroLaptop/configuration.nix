@@ -26,6 +26,7 @@
         self.nixosModules.pipewire-5_1-to-4_1
 
         self.nixosModules.steam
+        self.nixosModules.steamGamescopeSession
         self.nixosModules.minecraft
 
         self.nixosModules.nfsMount

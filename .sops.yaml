@@ -5,6 +5,7 @@ keys:
   - &admin_isaac age1z9lta34xq4lr2a3dhpc4fesnnrxypzfay0n3n9yah6fcy22urqwq9klayp
   - &host_cleodesktop age1nq94ngufj0790sz995trgq2m66gluwar50z5k3ufk05qkg5gcfwsa8qj5d
   - &host_lunaserver age14kkltu3y88mq3j2a2g76kxlppzj9agxgzc0869zcfyvm2st9x49qf45963
+  - &host_mewosteamdeck age1pxep8z8f6ecp8sslthhc7wzhf682yymq3ddlp67hyqrxtrxr7yrq2eu2ws
   # TODO: yurolaptop was offline during migration — add its key and run updatekeys
   # before deploying sops there.
 creation_rules:
@@ -14,3 +15,4 @@ creation_rules:
           - *admin_isaac
           - *host_cleodesktop
           - *host_lunaserver
+          - *host_mewosteamdeck
