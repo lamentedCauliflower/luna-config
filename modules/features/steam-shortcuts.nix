@@ -19,12 +19,18 @@
         exec ${pkgs.jellyfin-media-player}/bin/jellyfin-desktop "$@"
       '';
 
+      # The three flags Chromium needs to open at all in Gaming Mode (see the
+      # Chromium tile below for why each is required). Shared so the plain
+      # browser tile and the YouTube kiosk tile can't drift apart.
+      chromium = "${pkgs.ungoogled-chromium}/bin/chromium";
+      chromiumGameMode = "--ozone-platform=x11 --password-store=basic --no-sandbox";
+
       # ponytail: icon sizes are best-effort store paths; a missing size only
       # yields a blank tile (not a build error) — bump if a tile shows blank.
       shortcuts = [
         {
           AppName = "Chromium";
-          Exe = "${pkgs.ungoogled-chromium}/bin/chromium";
+          Exe = chromium;
           StartDir = "${pkgs.ungoogled-chromium}/bin/";
           icon = "${pkgs.ungoogled-chromium}/share/icons/hicolor/256x256/apps/chromium.png";
           # Force XWayland. Gaming Mode's focus handoff only tracks XWayland
@@ -48,7 +54,18 @@
           # webhelper runs --no-sandbox for the same reason. Verified on a clean
           # boot: without it the browser hangs at the zygote; with it, 14 procs
           # + GAMESCOPE_FOCUSED_APP.
-          LaunchOptions = "--ozone-platform=x11 --password-store=basic --no-sandbox";
+          LaunchOptions = chromiumGameMode;
+        }
+        {
+          # YouTube in Chromium kiosk (fullscreen, no browser UI). Shares the
+          # default Chromium profile, so it inherits uBlock Origin + SponsorBlock
+          # + DeArrow (ad-free, sponsor-skipping). Gaming Mode runs one app at a
+          # time, so sharing the profile with the Chromium tile can't clash.
+          AppName = "YouTube";
+          Exe = chromium;
+          StartDir = "${pkgs.ungoogled-chromium}/bin/";
+          icon = "${pkgs.ungoogled-chromium}/share/icons/hicolor/256x256/apps/chromium.png";
+          LaunchOptions = "${chromiumGameMode} --kiosk https://www.youtube.com/";
         }
         {
           AppName = "LibreWolf";
