@@ -26,6 +26,10 @@
 
       home-manager = {
         useGlobalPkgs = true;
+        # On collision with an unmanaged file, rename it <file>.hm-bak
+        # instead of aborting activation. Note: only one backup per ext —
+        # if <file>.hm-bak already exists, activation still fails.
+        backupFileExtension = "hm-bak";
         extraSpecialArgs = { inherit inputs; };
         users.isaac = self.homeModules.isaacConfiguration;
       };
