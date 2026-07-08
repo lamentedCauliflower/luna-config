@@ -9,6 +9,16 @@
       # with zero force-installed extensions.
       librewolf = config.home-manager.users.${username}.programs.librewolf.finalPackage;
 
+      # jellyfin-media-player is QtWebEngine; under Steam's runtime its Chromium
+      # sandbox deadlocks the process at startup (single-thread futex, no
+      # window). QtWebEngine reads QTWEBENGINE_DISABLE_SANDBOX from the env,
+      # which a Steam LaunchOptions arg can't set, so wrap it. Verified on a
+      # clean boot: with it the Jellyfin window maps and is focused.
+      jellyfin = pkgs.writeShellScriptBin "jellyfin-gamemode" ''
+        export QTWEBENGINE_DISABLE_SANDBOX=1
+        exec ${pkgs.jellyfin-media-player}/bin/jellyfin-desktop "$@"
+      '';
+
       # ponytail: icon sizes are best-effort store paths; a missing size only
       # yields a blank tile (not a build error) — bump if a tile shows blank.
       shortcuts = [
@@ -30,7 +40,15 @@
           # stuck at the zygote, no window). basic skips the keyring — the same
           # thing Steam's own webhelper does. Verified: without it the browser
           # hangs in recv on the session bus; with it, 10 procs + focused window.
-          LaunchOptions = "--ozone-platform=x11 --password-store=basic";
+          #
+          # --no-sandbox: under Steam's runtime the zygote can't set up its
+          # namespace sandbox, so the browser process deadlocks in recvmsg
+          # waiting for a zygote fork that never completes (only visible on a
+          # cold boot — a warm session had the services it needed). Steam's own
+          # webhelper runs --no-sandbox for the same reason. Verified on a clean
+          # boot: without it the browser hangs at the zygote; with it, 14 procs
+          # + GAMESCOPE_FOCUSED_APP.
+          LaunchOptions = "--ozone-platform=x11 --password-store=basic --no-sandbox";
         }
         {
           AppName = "LibreWolf";
@@ -46,8 +64,8 @@
         }
         {
           AppName = "Jellyfin";
-          Exe = "${pkgs.jellyfin-media-player}/bin/jellyfin-desktop";
-          StartDir = "${pkgs.jellyfin-media-player}/bin/";
+          Exe = "${jellyfin}/bin/jellyfin-gamemode";
+          StartDir = "${jellyfin}/bin/";
           # Only a scalable SVG ships; Steam may show a blank tile (set grid art
           # in Steam if so) but it is not a build error.
           icon = "${pkgs.jellyfin-media-player}/share/icons/hicolor/scalable/apps/org.jellyfin.JellyfinDesktop.svg";
