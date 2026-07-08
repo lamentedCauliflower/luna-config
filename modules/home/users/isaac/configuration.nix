@@ -10,6 +10,7 @@
       self.homeModules.basic-utils
       self.homeModules.chromium
       self.homeModules.librewolf
+      self.homeModules.jellyfin
       self.homeModules.stylix
       self.homeModules.voxtype
       self.homeModules.threeDPrinting

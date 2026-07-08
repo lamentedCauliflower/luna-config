@@ -39,6 +39,12 @@
           "privacy.clearOnShutdown.cookies" = false;
           "privacy.resistFingerprinting" = false;
           "network.cookie.lifetimePolicy" = 0;
+
+          # Steam Deck Game Mode (gamescope): entering video fullscreen makes
+          # Firefox spawn a separate fullscreen widget/window that gamescope
+          # rescales badly (flicker/black/wrong size). Keeping fullscreen inside
+          # the existing window avoids the window swap.
+          "full-screen-api.ignore-widgets" = true;
         };
         profiles = {
           ${username} = {

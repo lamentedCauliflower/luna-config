@@ -24,7 +24,13 @@
           # forever. --ozone-platform=x11 keeps the window on the :1 XWayland
           # that Gaming Mode focuses. (Verified on-device: wayland => no window
           # on :1 => not in GAMESCOPE_FOCUSABLE_WINDOWS; x11 => window maps.)
-          LaunchOptions = "--ozone-platform=x11";
+          #
+          # --password-store=basic: Game Mode runs no keyring daemon, so
+          # Chromium's startup Secret Service D-Bus call blocks forever (browser
+          # stuck at the zygote, no window). basic skips the keyring — the same
+          # thing Steam's own webhelper does. Verified: without it the browser
+          # hangs in recv on the session bus; with it, 10 procs + focused window.
+          LaunchOptions = "--ozone-platform=x11 --password-store=basic";
         }
         {
           AppName = "LibreWolf";
@@ -36,6 +42,21 @@
           # on-device: overlay on => hang, overlay off => window maps). Chromium
           # tolerates the overlay, Firefox-based LibreWolf does not, so disable
           # it just here.
+          AllowOverlay = 0;
+        }
+        {
+          AppName = "Jellyfin";
+          Exe = "${pkgs.jellyfin-media-player}/bin/jellyfin-desktop";
+          StartDir = "${pkgs.jellyfin-media-player}/bin/";
+          # Only a scalable SVG ships; Steam may show a blank tile (set grid art
+          # in Steam if so) but it is not a build error.
+          icon = "${pkgs.jellyfin-media-player}/share/icons/hicolor/scalable/apps/org.jellyfin.JellyfinDesktop.svg";
+          # 10-foot TV UI, fullscreen — the console-style layout for Game Mode.
+          LaunchOptions = "--fullscreen --tv";
+          # Same overlay deadlock as LibreWolf: with Steam's overlay injected the
+          # Qt/QtWebEngine app hangs before mapping its main window (only a Qt
+          # clipboard-owner window appears). Verified: overlay off => "Jellyfin"
+          # window maps. Disable the overlay here too.
           AllowOverlay = 0;
         }
       ];
