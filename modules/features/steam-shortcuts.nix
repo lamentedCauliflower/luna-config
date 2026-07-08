@@ -1,10 +1,14 @@
 { username, ... }:
 {
   flake.nixosModules.steamShortcuts =
-    { pkgs, ... }:
+    { pkgs, config, ... }:
     let
-      # Non-Steam Shortcuts for the two browsers. Plain binary launch, no flags —
-      # Steam's gamescope handles the window in Gaming Mode.
+      # LibreWolf's extension policies live in the home-manager-wrapped
+      # finalPackage (its distribution/policies.json), NOT the bare pkgs.librewolf.
+      # The shortcut must launch the wrapped binary or Gaming Mode gets a browser
+      # with zero force-installed extensions.
+      librewolf = config.home-manager.users.${username}.programs.librewolf.finalPackage;
+
       # ponytail: icon sizes are best-effort store paths; a missing size only
       # yields a blank tile (not a build error) — bump if a tile shows blank.
       shortcuts = [
@@ -13,12 +17,19 @@
           Exe = "${pkgs.ungoogled-chromium}/bin/chromium";
           StartDir = "${pkgs.ungoogled-chromium}/bin/";
           icon = "${pkgs.ungoogled-chromium}/share/icons/hicolor/256x256/apps/chromium.png";
+          # Gaming Mode is a nested gamescope Wayland compositor. Chromium's
+          # default XWayland path leaves the top-level window unmapped there, so
+          # gamescope shows a black screen forever ("stalls"). Render natively
+          # into gamescope's Wayland instead (what SteamOS's own Chrome does).
+          # If a GPU-context stall persists on this hardware, fall back to
+          # "--ozone-platform=x11 --disable-gpu" (see steam-runtime#830).
+          LaunchOptions = "--ozone-platform=wayland --enable-features=UseOzonePlatform";
         }
         {
           AppName = "LibreWolf";
-          Exe = "${pkgs.librewolf}/bin/librewolf";
-          StartDir = "${pkgs.librewolf}/bin/";
-          icon = "${pkgs.librewolf}/share/icons/hicolor/128x128/apps/librewolf.png";
+          Exe = "${librewolf}/bin/librewolf";
+          StartDir = "${librewolf}/bin/";
+          icon = "${librewolf}/share/icons/hicolor/128x128/apps/librewolf.png";
         }
       ];
 

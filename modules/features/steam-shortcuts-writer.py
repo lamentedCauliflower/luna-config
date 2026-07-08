@@ -1,7 +1,8 @@
 """Merge declarative non-Steam shortcuts into every Steam account's
 shortcuts.vdf, preserving any manually-added entries.
 
-argv[1] is a JSON file: a list of { AppName, Exe, StartDir, icon } objects.
+argv[1] is a JSON file: a list of
+{ AppName, Exe, StartDir, icon, LaunchOptions? } objects.
 Run before Steam starts (Steam rewrites this file from memory on exit).
 """
 import json
@@ -37,7 +38,7 @@ def make_entry(desired):
         "StartDir": start,
         "icon": desired.get("icon", ""),
         "ShortcutPath": "",
-        "LaunchOptions": "",
+        "LaunchOptions": desired.get("LaunchOptions", ""),
         "IsHidden": 0,
         "AllowDesktopConfig": 1,
         "AllowOverlay": 1,
