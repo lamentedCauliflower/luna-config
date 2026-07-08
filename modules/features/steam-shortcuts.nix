@@ -17,19 +17,26 @@
           Exe = "${pkgs.ungoogled-chromium}/bin/chromium";
           StartDir = "${pkgs.ungoogled-chromium}/bin/";
           icon = "${pkgs.ungoogled-chromium}/share/icons/hicolor/256x256/apps/chromium.png";
-          # Gaming Mode is a nested gamescope Wayland compositor. Chromium's
-          # default XWayland path leaves the top-level window unmapped there, so
-          # gamescope shows a black screen forever ("stalls"). Render natively
-          # into gamescope's Wayland instead (what SteamOS's own Chrome does).
-          # If a GPU-context stall persists on this hardware, fall back to
-          # "--ozone-platform=x11 --disable-gpu" (see steam-runtime#830).
-          LaunchOptions = "--ozone-platform=wayland --enable-features=UseOzonePlatform";
+          # Force XWayland. Gaming Mode's focus handoff only tracks XWayland
+          # windows (it tags them with the STEAM_GAME atom via the X11-only
+          # overlay). A native-Wayland Chromium renders straight to gamescope-0
+          # and never produces a focusable window, so gamescope shows "Launching"
+          # forever. --ozone-platform=x11 keeps the window on the :1 XWayland
+          # that Gaming Mode focuses. (Verified on-device: wayland => no window
+          # on :1 => not in GAMESCOPE_FOCUSABLE_WINDOWS; x11 => window maps.)
+          LaunchOptions = "--ozone-platform=x11";
         }
         {
           AppName = "LibreWolf";
           Exe = "${librewolf}/bin/librewolf";
           StartDir = "${librewolf}/bin/";
           icon = "${librewolf}/share/icons/hicolor/128x128/apps/librewolf.png";
+          # Steam's gameoverlayrenderer.so LD_PRELOAD deadlocks LibreWolf's
+          # startup (it hangs on a futex before mapping a window — verified
+          # on-device: overlay on => hang, overlay off => window maps). Chromium
+          # tolerates the overlay, Firefox-based LibreWolf does not, so disable
+          # it just here.
+          AllowOverlay = 0;
         }
       ];
 

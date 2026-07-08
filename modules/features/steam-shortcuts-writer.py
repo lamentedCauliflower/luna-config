@@ -41,7 +41,7 @@ def make_entry(desired):
         "LaunchOptions": desired.get("LaunchOptions", ""),
         "IsHidden": 0,
         "AllowDesktopConfig": 1,
-        "AllowOverlay": 1,
+        "AllowOverlay": desired.get("AllowOverlay", 1),
         "OpenVR": 0,
         "Devkit": 0,
         "DevkitGameID": "",
