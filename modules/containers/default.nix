@@ -13,7 +13,7 @@
         self.nixosModules.fourgetContainer
         # Obselete
         # self.nixosModules.frigateContainer
-        self.nixosModules.rommContainer
+        # self.nixosModules.rommContainer
         self.nixosModules.octoprintContainer
         self.nixosModules.giteaContainer
         self.nixosModules.minecraftContainer
