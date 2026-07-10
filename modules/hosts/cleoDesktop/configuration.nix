@@ -41,6 +41,8 @@
         self.nixosModules.bootUpdate
         self.nixosModules.rustDev
         self.nixosModules.rebootWindows
+
+        self.nixosModules.allEmulators
       ];
 
       hostConfig.bootUpdate = {

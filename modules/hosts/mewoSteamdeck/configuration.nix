@@ -32,6 +32,8 @@
         self.nixosModules.syncthing
 
         self.nixosModules.bootUpdate
+
+        self.nixosModules.allEmulators
       ];
 
       # SteamOS-like behaviour: boot straight into Gaming Mode as isaac, no

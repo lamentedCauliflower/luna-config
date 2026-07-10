@@ -1,7 +1,7 @@
 { username, ... }:
 {
   flake.nixosModules.steamShortcuts =
-    { pkgs, config, ... }:
+    { pkgs, config, lib, ... }:
     let
       # LibreWolf's extension policies live in the home-manager-wrapped
       # finalPackage (its distribution/policies.json), NOT the bare pkgs.librewolf.
@@ -24,6 +24,23 @@
       # browser tile and the YouTube kiosk tile can't drift apart.
       chromium = "${pkgs.ungoogled-chromium}/bin/chromium";
       chromiumGameMode = "--ozone-platform=x11 --password-store=basic --no-sandbox";
+
+      # Ryujinx tile only exists when the emulator is enabled on this host (set
+      # by allEmulators). `or false` keeps this safe on a host that has
+      # steamShortcuts but not allEmulators — then the option is undeclared and
+      # the tile is dropped. Both are lazy: ryujinxPkg/ryujinxGameMode are only
+      # forced when the tile is actually included.
+      ryujinxEnabled = config.hostConfig.emulators.ryujinx.enable or false;
+      ryujinxPkg = config.hostConfig.emulators.ryujinx.package;
+      ryujinxGameMode = pkgs.writeShellScriptBin "ryujinx-gamemode" ''
+        # Avalonia picks Wayland when WAYLAND_DISPLAY is set and renders straight
+        # to gamescope-0, which Gaming Mode's X11-only focus handoff never tracks
+        # (tile stuck "Launching"). Hide the Wayland socket so it falls back to
+        # the :1 XWayland Gaming Mode focuses — same rationale as the Chromium
+        # --ozone-platform=x11 tile. Verify on-device.
+        unset WAYLAND_DISPLAY
+        exec ${ryujinxPkg}/bin/ryujinx-canary "$@"
+      '';
 
       # ponytail: icon sizes are best-effort store paths; a missing size only
       # yields a blank tile (not a build error) — bump if a tile shows blank.
@@ -93,6 +110,18 @@
           # clipboard-owner window appears). Verified: overlay off => "Jellyfin"
           # window maps. Disable the overlay here too.
           AllowOverlay = 0;
+        }
+      ]
+      ++ lib.optionals ryujinxEnabled [
+        {
+          AppName = "Ryujinx";
+          Exe = "${ryujinxGameMode}/bin/ryujinx-gamemode";
+          StartDir = "${ryujinxGameMode}/bin/";
+          icon = "${ryujinxPkg}/share/icons/hicolor/256x256/apps/ryujinx-canary.png";
+          # Avalonia emulator UI. If it hangs before mapping a window under the
+          # Steam overlay LD_PRELOAD like LibreWolf/Jellyfin did, set
+          # AllowOverlay = 0 here — left on for now since the overlay is useful
+          # in-game. Verify on-device.
         }
       ];
 
