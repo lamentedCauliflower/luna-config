@@ -33,7 +33,12 @@
         # SDL3, ffmpeg, Skia and soundio are bundled inside the AppImage; the
         # GPU driver/loader libs are not, so add them to the FHS env. Extend
         # here if a game fails to find a Vulkan/GL driver on-device.
+        #
+        # icu: .NET needs libicu for globalization or it FailFast-crashes at
+        # Program.Main before drawing a window ("Couldn't find a valid ICU
+        # package"). appimageTools' default FHS does not include it.
         extraPkgs = p: [
+          p.icu
           p.vulkan-loader
           p.libGL
         ];
@@ -48,15 +53,24 @@
         '';
       };
 
-      # game_dirs is the long-stable key for the rom scan directory. Canary's
-      # autoload-DLC/Updates keys could NOT be verified statically (the config
-      # schema lives in the compressed .NET single-file bundle). After the first
-      # launch, read ~/.config/Ryujinx/Config.json for the exact autoload-dir
-      # keys and add them here. Ryujinx ignores unknown JSON keys, so seeding
-      # only what is known is safe.
+      # Keys verified on-device against a Ryujinx-generated Config.json (Canary
+      # 1.3.334, config `version` 73):
+      #   game_dirs     - dirs scanned for roms
+      #   autoload_dirs - dirs scanned for DLC + title updates (one list, both)
+      # The `version` field is REQUIRED: without it Ryujinx rejects the file as
+      # invalid, renames it *.invalid and loads defaults (so nothing applies).
+      # A partial config with `version` present IS accepted (unknown fields
+      # default). Seed only applies on first run (activation writes if absent);
+      # a future Canary that bumps the schema migrates this on load. If a bump
+      # ever rejects it, refresh `version` from a freshly generated Config.json.
       configSeed = pkgs.writeText "ryujinx-config-seed.json" (
         builtins.toJSON {
+          version = 73;
           game_dirs = [ romsDir ];
+          autoload_dirs = [
+            "${emu}/DLC/nintendo-switch"
+            "${emu}/Updates/nintendo-switch"
+          ];
         }
       );
     in
