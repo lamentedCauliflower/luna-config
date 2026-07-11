@@ -9,8 +9,10 @@
     {
       imports = [
         self.nixosModules.ryujinxCanary
+        self.nixosModules.nxOptimizer
       ];
 
       hostConfig.emulators.ryujinx.enable = true;
+      hostConfig.emulators.nxOptimizer.enable = true;
     };
 }
