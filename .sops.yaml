@@ -6,8 +6,7 @@ keys:
   - &host_cleodesktop age1nq94ngufj0790sz995trgq2m66gluwar50z5k3ufk05qkg5gcfwsa8qj5d
   - &host_lunaserver age14kkltu3y88mq3j2a2g76kxlppzj9agxgzc0869zcfyvm2st9x49qf45963
   - &host_mewosteamdeck age1pxep8z8f6ecp8sslthhc7wzhf682yymq3ddlp67hyqrxtrxr7yrq2eu2ws
-  # TODO: yurolaptop was offline during migration — add its key and run updatekeys
-  # before deploying sops there.
+  - &host_yurolaptop age1hzhlfzm2lk3l494ske5ywrhxlhxnuc6a7cyq8008wym7vk20a58sgh8tnk
 creation_rules:
   - path_regex: secrets/.*
     key_groups:
@@ -16,3 +15,4 @@ creation_rules:
           - *host_cleodesktop
           - *host_lunaserver
           - *host_mewosteamdeck
+          - *host_yurolaptop

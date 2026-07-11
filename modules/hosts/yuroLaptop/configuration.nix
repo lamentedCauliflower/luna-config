@@ -8,8 +8,6 @@
       imports = [
         self.nixosModules.yuroLaptopHardware
 
-        # NOTE: yurolaptop's host key is not yet a recipient in .sops.yaml —
-        # add it and run `sops updatekeys` before rebuilding this host.
         self.nixosModules.sopsBase
 
         self.nixosModules.docker
