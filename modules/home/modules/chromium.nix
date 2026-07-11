@@ -24,8 +24,8 @@
         extensions = [
           (chromiumExtension {
             id = "cjpalhdlnbpafiamejdnhcphjbkeiagm"; # uBlock Origin
-            version = "1.72.0";
-            hash = "sha256-b18FKOXz5mGKbIMd5TvmXz95KQ7fTT44Qzk46xGCQ/I=";
+            version = "1.72.2";
+            hash = "sha256-bgLY5tzlae7HIbUx+cfShAPlQmRCQX1ahVoX3SiLVvg=";
           })
           (chromiumExtension {
             id = "enamippconapkdmgfgjchkhakpfinmaj"; # DeArrow
