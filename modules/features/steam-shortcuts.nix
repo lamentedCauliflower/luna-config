@@ -42,6 +42,19 @@
         exec ${ryujinxPkg}/bin/ryujinx-canary "$@"
       '';
 
+      # Eden tile, same enable-gating and XWayland rationale as Ryujinx.
+      edenEnabled = config.hostConfig.emulators.eden.enable or false;
+      edenPkg = config.hostConfig.emulators.eden.package;
+      edenGameMode = pkgs.writeShellScriptBin "eden-gamemode" ''
+        # Force Qt onto XWayland: gamescope's focus handoff only tracks X11
+        # windows, so a native-Wayland Qt window renders to gamescope-0 and never
+        # gets focused ("Launching" forever). Hiding the Wayland socket makes Qt
+        # fall back to xcb; QT_QPA_PLATFORM=xcb makes it explicit. Verify on-device.
+        unset WAYLAND_DISPLAY
+        export QT_QPA_PLATFORM=xcb
+        exec ${edenPkg}/bin/eden "$@"
+      '';
+
       # ponytail: icon sizes are best-effort store paths; a missing size only
       # yields a blank tile (not a build error) — bump if a tile shows blank.
       shortcuts = [
@@ -122,6 +135,18 @@
           # Steam overlay LD_PRELOAD like LibreWolf/Jellyfin did, set
           # AllowOverlay = 0 here — left on for now since the overlay is useful
           # in-game. Verify on-device.
+        }
+      ]
+      ++ lib.optionals edenEnabled [
+        {
+          AppName = "Eden";
+          Exe = "${edenGameMode}/bin/eden-gamemode";
+          StartDir = "${edenGameMode}/bin/";
+          # Only a scalable SVG ships; Steam may show a blank tile (set grid art
+          # in Steam if so) but it is not a build error.
+          icon = "${edenPkg}/share/icons/hicolor/scalable/apps/eden.svg";
+          # Qt emulator UI. If it hangs before mapping a window under the Steam
+          # overlay LD_PRELOAD, set AllowOverlay = 0 here. Verify on-device.
         }
       ];
 
