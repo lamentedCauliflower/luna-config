@@ -4,8 +4,6 @@
   ...
 }:
 {
-  systems = [ "x86_64-linux" ];
-
   flake.nixosConfigurations.yurolaptop = inputs.nixpkgs.lib.nixosSystem {
     modules = [
       self.nixosModules.yuroLaptopConfiguration

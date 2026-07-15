@@ -30,8 +30,12 @@ The GNOME session reached via "Switch to Desktop" in the Steam menu on mewoSteam
 _Avoid_: desktop environment session, KDE mode
 
 **Non-Steam Shortcut**:
-An entry in a Steam account's `shortcuts.vdf` that launches an arbitrary local program (here: chromium and librewolf) from the Steam library, including from Gaming Mode. Each entry belongs to one Steam account under `userdata/<accountID>/`; the account ID only exists after that account has logged into Steam once.
-_Avoid_: "non-steam game" (these are browsers), conflating with an installed Steam app.
+An entry in a Steam account's `shortcuts.vdf` that launches an arbitrary local program (browsers, Jellyfin, emulators) from the Steam library, including from Gaming Mode. Each entry belongs to one Steam account under `userdata/<accountID>/`; the account ID only exists after that account has logged into Steam once. Each shortcut is declared by the module that owns the program it launches: universal shortcuts (browsers, Jellyfin) by the steamShortcuts module itself, an emulator's shortcut by that emulator's module.
+_Avoid_: "non-steam game", conflating with an installed Steam app.
+
+**Game Mode Tile**:
+A Non-Steam Shortcut as it appears in Gaming Mode's library grid. A tile exists only where its program is installed — an emulator's tile can never appear on a host without that emulator.
+_Avoid_: treating the tile as a separate thing from its Non-Steam Shortcut (one entry, two surfaces).
 
 **Default Browser**:
 The browser that owns the system's html/http(s) handlers and the `DEFAULT_BROWSER` session variable. Chromium (ungoogled) is the Default Browser on every host; librewolf is installed alongside but never claims these handlers.
@@ -43,6 +47,7 @@ _Avoid_: assuming the browser a user launches most is the Default Browser — de
 - lunaServer reverse-proxies `hermes.luna.local` to the **Hermes VM**.
 - mewoSteamdeck boots into **Gaming Mode**; **Desktop Mode** is only reachable from inside it.
 - chromium and librewolf are each surfaced as a **Non-Steam Shortcut** on every Steam host (mewoSteamdeck, cleoDesktop, yuroLaptop).
+- each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
 - chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
 
 ## Example Dialogue

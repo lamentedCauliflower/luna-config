@@ -1,4 +1,4 @@
-{ username, ... }:
+{ self, username, ... }:
 {
   flake.nixosModules.ryujinxCanary =
     { config, lib, pkgs, ... }:
@@ -8,50 +8,15 @@
       emu = "/mnt/media/Games/Emulation";
       romsDir = "${emu}/Roms/nintendo-switch";
 
-      # --- Canary pin (bump version + hash together) -----------------------
-      # Canary is not in nixpkgs; this wraps the prebuilt Linux x64 AppImage.
-      # The GitLab is Anubis-gated, but *direct asset downloads* bypass the
-      # challenge, so Nix's fetcher works. To bump:
-      #   nix-prefetch-url https://git.ryujinx.app/Ryubing/Canary/releases/download/<ver>/ryujinx-canary-<ver>-x64.AppImage
-      #   nix hash convert --hash-algo sha256 --to sri <printed-hash>
-      version = "1.3.334";
-      src = pkgs.fetchurl {
-        url = "https://git.ryujinx.app/Ryubing/Canary/releases/download/${version}/ryujinx-canary-${version}-x64.AppImage";
-        hash = "sha256-SIrL2MCmHzFrNXz5+HYmwJ7by9ioVBw0F+EqKj/zi6k=";
-      };
-
-      # Icon + .desktop live inside the AppImage squashfs; extract to expose
-      # them at $out/share (Desktop-Mode launcher + Steam Game Mode tile icon).
-      appimageContents = pkgs.appimageTools.extractType2 {
-        pname = "ryujinx-canary";
-        inherit version src;
-      };
-
-      ryujinx = pkgs.appimageTools.wrapType2 {
-        pname = "ryujinx-canary";
-        inherit version src;
-        # SDL3, ffmpeg, Skia and soundio are bundled inside the AppImage; the
-        # GPU driver/loader libs are not, so add them to the FHS env. Extend
-        # here if a game fails to find a Vulkan/GL driver on-device.
-        #
-        # icu: .NET needs libicu for globalization or it FailFast-crashes at
-        # Program.Main before drawing a window ("Couldn't find a valid ICU
-        # package"). appimageTools' default FHS does not include it.
-        extraPkgs = p: [
-          p.icu
-          p.vulkan-loader
-          p.libGL
-        ];
-        extraInstallCommands = ''
-          install -Dm444 ${appimageContents}/usr/share/icons/hicolor/256x256/apps/app.ryujinx.Ryujinx.png \
-            $out/share/icons/hicolor/256x256/apps/ryujinx-canary.png
-          install -Dm444 ${appimageContents}/usr/share/applications/app.ryujinx.Ryujinx.desktop \
-            $out/share/applications/ryujinx-canary.desktop
-          substituteInPlace $out/share/applications/ryujinx-canary.desktop \
-            --replace-warn 'Exec=Ryujinx.sh' 'Exec=ryujinx-canary' \
-            --replace-warn 'Icon=app.ryujinx.Ryujinx' 'Icon=ryujinx-canary'
-        '';
-      };
+      ryujinxGameMode = pkgs.writeShellScriptBin "ryujinx-gamemode" ''
+        # Avalonia picks Wayland when WAYLAND_DISPLAY is set and renders straight
+        # to gamescope-0, which Gaming Mode's X11-only focus handoff never tracks
+        # (tile stuck "Launching"). Hide the Wayland socket so it falls back to
+        # the :1 XWayland Gaming Mode focuses — same rationale as the Chromium
+        # --ozone-platform=x11 tile. Verify on-device.
+        unset WAYLAND_DISPLAY
+        exec ${cfg.package}/bin/ryujinx-canary "$@"
+      '';
 
       # Config.json seed. A PARTIAL config is fatal: Ryujinx accepts it (no
       # *.invalid rename) but then NREs in ConfigurationState.Load when a
@@ -78,19 +43,29 @@
       );
     in
     {
+      # Repo standard: importing a module enables it — no enable flag.
       options.hostConfig.emulators.ryujinx = {
-        enable = lib.mkEnableOption "Ryujinx Canary (Ryubing) Switch emulator";
-
         package = lib.mkOption {
           type = lib.types.package;
-          default = ryujinx;
-          defaultText = lib.literalExpression "the pinned Ryujinx Canary AppImage wrapper";
-          description = "Pinned Ryujinx Canary package; shared with the steamShortcuts Game Mode tile.";
+          default = self.packages.${pkgs.stdenv.hostPlatform.system}.ryujinx-canary;
+          defaultText = lib.literalExpression "self.packages.<system>.ryujinx-canary";
+          description = "Pinned Ryujinx Canary package (built in modules/packages/ryujinx-canary.nix).";
         };
       };
 
-      config = lib.mkIf cfg.enable {
+      config = {
         environment.systemPackages = [ cfg.package ];
+
+        # Game Mode Tile; importing this module requires the steamShortcuts
+        # module on the same host (see docs/adr/0003).
+        hostConfig.steamShortcuts.shortcuts.Ryujinx = {
+          exe = "${ryujinxGameMode}/bin/ryujinx-gamemode";
+          icon = "${cfg.package}/share/icons/hicolor/256x256/apps/ryujinx-canary.png";
+          # Avalonia emulator UI. If it hangs before mapping a window under the
+          # Steam overlay LD_PRELOAD like LibreWolf/Jellyfin did, set
+          # allowOverlay = false here — left on for now since the overlay is
+          # useful in-game. Verify on-device.
+        };
 
         home-manager.users.${username} =
           { config, lib, ... }:

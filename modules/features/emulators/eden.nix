@@ -1,4 +1,4 @@
-{ username, ... }:
+{ self, username, ... }:
 {
   flake.nixosModules.eden =
     { config, lib, pkgs, ... }:
@@ -7,65 +7,40 @@
 
       emu = "/mnt/media/Games/Emulation";
 
-      # --- pin (bump version + hash together) ------------------------------
-      #   nix-prefetch-url <url>
-      #   nix hash convert --hash-algo sha256 --to sri <printed-hash>
-      # amd64-clang-pgo = generic modern x86_64, PGO-optimised; runs on both the
-      # desktop and the Deck (there are Deck-specific builds, but one is simpler).
-      version = "0.2.1";
-      src = pkgs.fetchurl {
-        url = "https://stable.eden-emu.dev/v${version}/Eden-Linux-v${version}-amd64-clang-pgo.AppImage";
-        hash = "sha256-eii/mIsGSIMZiXIr26qQqzE3G0A4CBmYE+DqfIslum0=";
-      };
-
-      # Eden's .AppImage carries the type-2 magic but its payload is DwarFS, not
-      # squashfs, so appimageTools can't extract it ("no valid SQUASHFS
-      # superblock"). Extract the DwarFS image with dwarfsextract (offset
-      # auto-detected, so it survives version bumps), then FHS-wrap the AppDir.
-      edenAppDir = pkgs.runCommand "eden-${version}-appdir" {
-        nativeBuildInputs = [ pkgs.dwarfs ];
-      } ''
-        mkdir -p $out
-        dwarfsextract --input=${src} --image-offset=auto --output=$out
+      edenGameMode = pkgs.writeShellScriptBin "eden-gamemode" ''
+        # Force Qt onto XWayland: gamescope's focus handoff only tracks X11
+        # windows, so a native-Wayland Qt window renders to gamescope-0 and never
+        # gets focused ("Launching" forever). Hiding the Wayland socket makes Qt
+        # fall back to xcb; QT_QPA_PLATFORM=xcb makes it explicit. Verify on-device.
+        unset WAYLAND_DISPLAY
+        export QT_QPA_PLATFORM=xcb
+        exec ${cfg.package}/bin/eden "$@"
       '';
-
-      eden = pkgs.appimageTools.wrapAppImage {
-        pname = "eden";
-        inherit version;
-        src = edenAppDir;
-        # Qt (the rest is bundled in the AppDir) needs libxcb-cursor + xkbcommon
-        # for its xcb platform plugin on Qt 6.5+, or it fails to start with a
-        # visible window; the Vulkan renderer needs the loader. Extend if a GPU
-        # backend is missing on-device.
-        extraPkgs = p: [
-          p.vulkan-loader
-          p.xorg.xcbutilcursor
-          p.libxkbcommon
-        ];
-        extraInstallCommands = ''
-          install -Dm444 ${edenAppDir}/dev.eden_emu.eden.svg \
-            $out/share/icons/hicolor/scalable/apps/eden.svg
-          install -Dm444 ${edenAppDir}/dev.eden_emu.eden.desktop \
-            $out/share/applications/eden.desktop
-          substituteInPlace $out/share/applications/eden.desktop \
-            --replace-warn 'Icon=dev.eden_emu.eden' 'Icon=eden'
-        '';
-      };
     in
     {
+      # Repo standard: importing a module enables it — no enable flag.
       options.hostConfig.emulators.eden = {
-        enable = lib.mkEnableOption "Eden (Yuzu-lineage Switch emulator)";
-
         package = lib.mkOption {
           type = lib.types.package;
-          default = eden;
-          defaultText = lib.literalExpression "the FHS-wrapped Eden AppImage";
-          description = "Pinned Eden package.";
+          default = self.packages.${pkgs.stdenv.hostPlatform.system}.eden;
+          defaultText = lib.literalExpression "self.packages.<system>.eden";
+          description = "Pinned Eden package (built in modules/packages/eden.nix).";
         };
       };
 
-      config = lib.mkIf cfg.enable {
+      config = {
         environment.systemPackages = [ cfg.package ];
+
+        # Game Mode Tile; importing this module requires the steamShortcuts
+        # module on the same host (see docs/adr/0003).
+        hostConfig.steamShortcuts.shortcuts.Eden = {
+          exe = "${edenGameMode}/bin/eden-gamemode";
+          # Only a scalable SVG ships; Steam may show a blank tile (set grid art
+          # in Steam if so) but it is not a build error.
+          icon = "${cfg.package}/share/icons/hicolor/scalable/apps/eden.svg";
+          # Qt emulator UI. If it hangs before mapping a window under the Steam
+          # overlay LD_PRELOAD, set allowOverlay = false here. Verify on-device.
+        };
 
         home-manager.users.${username} =
           { config, ... }:
