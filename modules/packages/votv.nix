@@ -51,6 +51,12 @@
           mkdir -p $out/share/games
           cp -r "$gamedir" $out/share/games/votv
 
+          # r2modman's Linux Proton detection: an empty .forceproton marker in
+          # the game root tells it to launch the game through Proton. The
+          # game dir is store-read-only, so bake the marker in here instead of
+          # letting r2modman/the user create it.
+          touch $out/share/games/votv/.forceproton
+
           # Tile icon, extracted from the exe's embedded resources (largest
           # size wins). Best effort: a failure only costs the tile art (set
           # grid art in Steam if so), it is not a build error.

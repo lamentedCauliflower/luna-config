@@ -25,7 +25,16 @@
       };
 
       config = {
-        environment.systemPackages = [ cfg.package ];
+        environment.systemPackages = [
+          cfg.package
+          # Thunderstore mod manager. VotV mods load via Unreal Shimloader
+          # (profile-virtualized UE4SS): r2modman keeps mods/config in its own
+          # profile dirs and overlays them at runtime, so the store-read-only
+          # game tree is fine. Point r2modman's "Change VotV directory" at
+          # ${gameRoot}. The .forceproton marker r2modman looks for on Linux
+          # is baked into the package (modules/packages/votv.nix).
+          pkgs.r2modman
+        ];
         environment.pathsToLink = [ "/share/games" ];
 
         # Proton Tile: a Windows exe launched through Steam's Proton via a
