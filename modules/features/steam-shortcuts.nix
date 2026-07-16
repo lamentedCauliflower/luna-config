@@ -28,8 +28,8 @@
       chromiumGameMode = "--ozone-platform=x11 --password-store=basic --no-sandbox";
 
       # The writer consumes VDF-shaped objects ({ AppName, Exe, StartDir, icon,
-      # LaunchOptions?, AllowOverlay? }); the nix-side schema is the nixified
-      # submodule below, mapped here in one place.
+      # LaunchOptions?, AllowOverlay?, CompatTool? }); the nix-side schema is
+      # the nixified submodule below, mapped here in one place.
       shortcutsJson = pkgs.writeText "steam-nonsteam-shortcuts.json" (
         builtins.toJSON (
           lib.mapAttrsToList (name: sc: {
@@ -39,6 +39,7 @@
             icon = sc.icon;
             LaunchOptions = sc.launchOptions;
             AllowOverlay = if sc.allowOverlay then 1 else 0;
+            CompatTool = sc.compatTool;
           }) cfg.shortcuts
         )
       );
@@ -84,6 +85,18 @@
                       Whether Steam's gameoverlayrenderer.so is LD_PRELOADed.
                       Disable for programs the overlay deadlocks before they map
                       a window (Firefox-based and QtWebEngine apps so far).
+                    '';
+                  };
+                  compatTool = lib.mkOption {
+                    type = lib.types.nullOr lib.types.str;
+                    default = null;
+                    example = "proton_experimental";
+                    description = ''
+                      Steam compatibility tool forced for this shortcut, for
+                      tiles whose exe is a Windows binary (see docs/adr/0004).
+                      Written to config.vdf's CompatToolMapping keyed by the
+                      shortcut's appid; null (the default) leaves the tile
+                      launching natively.
                     '';
                   };
                 };
