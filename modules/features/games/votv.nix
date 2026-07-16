@@ -1,4 +1,4 @@
-{ self, ... }:
+{ self, username, ... }:
 {
   flake.nixosModules.votv =
     { config, lib, pkgs, ... }:
@@ -59,7 +59,19 @@
           # no game log ever written). PRESSURE_VESSEL_FILESYSTEMS_RO is the
           # documented steam-runtime knob to share extra paths; verified
           # on-device inside the SLR container (see docs/adr/0004).
-          launchOptions = "PRESSURE_VESSEL_FILESYSTEMS_RO=/run/current-system %command%";
+          #
+          # The linux_wrapper.sh part is r2modman's prescribed Proton launch
+          # line for shimloader mods: the wrapper (host-side, $HOME is shared
+          # into the container) injects the profile's --mod-dir/--pak-dir args
+          # and the WINEDLLOVERRIDES proxy loads the shim. r2modman must have
+          # managed VotV once for the wrapper to exist — a missing wrapper
+          # kills the tile's launch outright (r2modman's "Start vanilla" still
+          # works); recreate the profile or drop this line if r2modman's
+          # local state is ever wiped.
+          launchOptions =
+            "PRESSURE_VESSEL_FILESYSTEMS_RO=/run/current-system "
+            + ''WINEDLLOVERRIDES="winhttp,version=n,b" ''
+            + ''"/home/${username}/.config/r2modmanPlus-local/VotV/linux_wrapper.sh" %command%'';
         };
       };
     };
