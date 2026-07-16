@@ -43,6 +43,14 @@
           exe = "${gameRoot}/VotV.exe";
           icon = "${gameRoot}/votv.png";
           compatTool = "proton_experimental";
+          # Proton runs inside the Steam Linux Runtime container
+          # (pressure-vessel), which shares /nix but NOT /run/current-system —
+          # without this the exe path resolves on the host and dies in the
+          # container (wine bootstraps the prefix, then exits within seconds,
+          # no game log ever written). PRESSURE_VESSEL_FILESYSTEMS_RO is the
+          # documented steam-runtime knob to share extra paths; verified
+          # on-device inside the SLR container (see docs/adr/0004).
+          launchOptions = "PRESSURE_VESSEL_FILESYSTEMS_RO=/run/current-system %command%";
         };
       };
     };
