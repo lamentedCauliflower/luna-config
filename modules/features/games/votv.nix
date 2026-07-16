@@ -16,6 +16,17 @@
       # live — so this path and the tile name must never change (a package
       # bump doesn't touch them; renaming either orphans the prefix).
       gameRoot = "/home/${username}/.local/share/votv";
+
+      # Host-side save dir, symlinked into the Proton prefix below. Outside
+      # gameRoot on purpose: the documented clean-slate escape ("delete
+      # gameRoot and re-activate") must never take saves with it.
+      saveDir = "/home/${username}/.local/share/votv-saves";
+
+      # crc32("VotV.exe path (quoted)" + AppName) — the id the shortcuts
+      # writer derives (steam_appid_unsigned in steam-shortcuts-writer.py).
+      # Recompute if gameRoot or the tile name ever changes.
+      appid = "3351335672";
+      prefix = "/home/${username}/.local/share/Steam/steamapps/compatdata/${appid}";
     in
     {
       # Repo standard: importing a module enables it — no enable flag.
@@ -43,11 +54,11 @@
         # (docs/adr/0003). Proton Experimental itself is Steam-managed: on a
         # host that never installed it, the first launch prompts the download.
         #
-        # Saves live inside the Steam-owned prefix:
-        #   ~/.local/share/Steam/steamapps/compatdata/<appid>/pfx/
-        #     drive_c/users/steamuser/AppData/Local/VotV
-        # Pre-alpha updates can break saves — back that dir up before bumping
-        # the package pin.
+        # The game writes saves to %localappdata%/VotV inside the prefix; the
+        # votvSaveRedirect activation below replaces that dir with a symlink
+        # to ${saveDir}, so saves live host-side and survive prefix
+        # rotation/deletion. Pre-alpha updates can still break save
+        # compatibility — back ${saveDir} up before bumping the package pin.
         hostConfig.steamShortcuts.shortcuts."Voices of the Void" = {
           exe = "${gameRoot}/VotV.exe";
           icon = "${gameRoot}/votv.png";
@@ -83,6 +94,21 @@
                 run ${pkgs.rsync}/bin/rsync -a --chmod=u+w "$src/" "$dest/"
                 run sh -c 'printf %s "$1" > "$2"' _ "$src" "$stamp"
               fi
+            '';
+
+            # Redirect the game's save location (%localappdata%/VotV in the
+            # Proton prefix) to the host-side ${saveDir}: wine follows Linux
+            # symlinks, and pre-creating the drive_c path is safe — wineboot
+            # builds the rest of the user tree around it on first prefix
+            # init. Saves created before the redirect are migrated once.
+            home.activation.votvSaveRedirect = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+              saves="${saveDir}"
+              appdata="${prefix}/pfx/drive_c/users/steamuser/AppData/Local"
+              run mkdir -p "$saves" "$appdata"
+              if [ -d "$appdata/VotV" ] && [ ! -L "$appdata/VotV" ]; then
+                run sh -c 'cp -a "$1"/. "$2"/ && rm -rf "$1"' _ "$appdata/VotV" "$saves"
+              fi
+              run ln -sfn "$saves" "$appdata/VotV"
             '';
           };
       };
