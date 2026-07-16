@@ -37,6 +37,10 @@ _Avoid_: "non-steam game", conflating with an installed Steam app.
 A Non-Steam Shortcut as it appears in Gaming Mode's library grid. A tile exists only where its program is installed — an emulator's tile can never appear on a host without that emulator.
 _Avoid_: treating the tile as a separate thing from its Non-Steam Shortcut (one entry, two surfaces).
 
+**Proton Tile**:
+A Game Mode Tile whose program is a Windows exe, launched through Steam's Proton via a declarative CompatToolMapping entry in config.vdf (see docs/adr/0004). Its wine prefix — and so its saves — lives in Steam's compatdata keyed by the tile's appid, which is derived from the tile's Exe path and name; both must stay stable or the prefix is orphaned.
+_Avoid_: "wine game", "lutris/bottles game" — Proton Tiles run through Steam's own compat layer, no separate wine install exists.
+
 **Default Browser**:
 The browser that owns the system's html/http(s) handlers and the `DEFAULT_BROWSER` session variable. Chromium (ungoogled) is the Default Browser on every host; librewolf is installed alongside but never claims these handlers.
 _Avoid_: assuming the browser a user launches most is the Default Browser — default is specifically the mime/scheme handler owner.
@@ -49,6 +53,7 @@ _Avoid_: assuming the browser a user launches most is the Default Browser — de
 - chromium and librewolf are each surfaced as a **Non-Steam Shortcut** on every Steam host (mewoSteamdeck, cleoDesktop, yuroLaptop).
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
 - chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
+- Voices of the Void is a **Proton Tile** on cleoDesktop only.
 
 ## Example Dialogue
 

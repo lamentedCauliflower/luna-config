@@ -27,6 +27,7 @@
         self.nixosModules.steamShortcuts
         self.nixosModules.steamGamescopeSession
         self.nixosModules.minecraft
+        self.nixosModules.votv
 
         self.nixosModules.nfsMount
         self.nixosModules.hyprland

@@ -1,0 +1,49 @@
+{ self, ... }:
+{
+  flake.nixosModules.votv =
+    { config, lib, pkgs, ... }:
+    let
+      cfg = config.hostConfig.games.votv;
+
+      # Stable profile path for the game tree. The tile's appid is
+      # crc32(Exe + AppName) and keys BOTH its CompatToolMapping entry and its
+      # compatdata prefix — where the saves live — so Exe must never contain a
+      # store hash (a package bump would orphan the prefix). pathsToLink keeps
+      # this path fixed across rebuilds. Corollary: renaming the tile also
+      # changes the appid and orphans the prefix — don't (see docs/adr/0004).
+      gameRoot = "/run/current-system/sw/share/games/votv";
+    in
+    {
+      # Repo standard: importing a module enables it — no enable flag.
+      options.hostConfig.games.votv = {
+        package = lib.mkOption {
+          type = lib.types.package;
+          default = self.packages.${pkgs.stdenv.hostPlatform.system}.votv;
+          defaultText = lib.literalExpression "self.packages.<system>.votv";
+          description = "Pinned Voices of the Void package (built in modules/packages/votv.nix).";
+        };
+      };
+
+      config = {
+        environment.systemPackages = [ cfg.package ];
+        environment.pathsToLink = [ "/share/games" ];
+
+        # Proton Tile: a Windows exe launched through Steam's Proton via a
+        # declarative CompatToolMapping entry (docs/adr/0004). Importing this
+        # module requires the steamShortcuts module on the same host
+        # (docs/adr/0003). Proton Experimental itself is Steam-managed: on a
+        # host that never installed it, the first launch prompts the download.
+        #
+        # Saves live inside the Steam-owned prefix:
+        #   ~/.local/share/Steam/steamapps/compatdata/<appid>/pfx/
+        #     drive_c/users/steamuser/AppData/Local/VotV
+        # Pre-alpha updates can break saves — back that dir up before bumping
+        # the package pin.
+        hostConfig.steamShortcuts.shortcuts."Voices of the Void" = {
+          exe = "${gameRoot}/VotV.exe";
+          icon = "${gameRoot}/votv.png";
+          compatTool = "proton_experimental";
+        };
+      };
+    };
+}
