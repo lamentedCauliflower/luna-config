@@ -27,6 +27,11 @@
       # Recompute if gameRoot or the tile name ever changes.
       appid = "3351335672";
       prefix = "/home/${username}/.local/share/Steam/steamapps/compatdata/${appid}";
+
+      # r2modman profile whose mods the tile loads. Z:-style paths because
+      # the args are consumed by shimloader inside wine ($HOME is shared into
+      # the Proton container, so Z:/home/... resolves).
+      shimProfile = "Z:/home/${username}/.config/r2modmanPlus-local/VotV/profiles/Default/shimloader";
     in
     {
       # Repo standard: importing a module enables it — no enable flag.
@@ -63,16 +68,21 @@
           exe = "${gameRoot}/VotV.exe";
           icon = "${gameRoot}/votv.png";
           compatTool = "proton_experimental";
-          # r2modman's prescribed Proton launch line for shimloader mods: the
-          # wrapper (host-side, $HOME is shared into the container) injects
-          # the profile's --mod-dir/--pak-dir args and the WINEDLLOVERRIDES
-          # proxy loads the shim. r2modman must have managed VotV once for
-          # the wrapper to exist — a missing wrapper kills the tile's launch
-          # outright (r2modman's "Start vanilla" still works); recreate the
-          # profile or drop this line if r2modman's local state is ever wiped.
+          # Shimloader modded launch. r2modman deploys the UE4SS proxy pair
+          # (dwmapi.dll + ue4ss.dll) next to the shipping exe in the writable
+          # game copy; the dwmapi override makes wine load that native proxy
+          # (dwmapi is builtin-preferred otherwise → vanilla), and the
+          # shimloader args point it at the r2modman profile. r2modman's own
+          # "Start modded" button and its linux_wrapper.sh do NOT work for
+          # this non-Steam Proton setup — launch through this tile; r2modman
+          # is only the mod installer. Without the dlls in the game copy the
+          # override is inert and the tile launches vanilla.
           launchOptions =
-            ''WINEDLLOVERRIDES="winhttp,version=n,b" ''
-            + ''"/home/${username}/.config/r2modmanPlus-local/VotV/linux_wrapper.sh" %command%'';
+            ''WINEDLLOVERRIDES="dwmapi=n,b" %command%''
+            + " --mod-dir \"${shimProfile}/mod\""
+            + " --pak-dir \"${shimProfile}/pak\""
+            + " --cfg-dir \"${shimProfile}/cfg\""
+            + " --overlay-dir \"${shimProfile}/overlay\"";
         };
 
         home-manager.users.${username} =
