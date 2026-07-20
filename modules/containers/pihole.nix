@@ -10,10 +10,16 @@
     }:
     let
       dir = "stacks/pihole";
+      piholeIp = "192.168.0.12";
     in
     {
 
       virtualisation.docker.enable = true;
+
+      # Route every OTHER container on this host through pihole for DNS.
+      # Declared only here, so importing the pihole module is what enables it.
+      # Strict single entry (no fallback): pihole is the sole resolver, no bypass.
+      virtualisation.docker.daemon.settings.dns = [ piholeIp ];
 
       sops.secrets.piholeWebPassword = { };
       sops.templates."pihole.env" = {
@@ -34,8 +40,8 @@
               - ${config.sops.templates."pihole.env".path}
             ports:
               # DNS Ports
-              - "192.168.0.12:53:53/tcp"
-              - "192.168.0.12:53:53/udp"
+              - "${piholeIp}:53:53/tcp"
+              - "${piholeIp}:53:53/udp"
               # Default HTTP Port
               - "5380:80/tcp"
               # Default HTTPs Port. FTL will generate a self-signed certificate
@@ -44,6 +50,11 @@
               #- "67:67/udp"
               # Uncomment the line below if you are using Pi-hole as your NTP server
               #- "123:123/udp"
+            # pihole must NOT resolve via the daemon-wide DNS (which points back at
+            # pihole itself) or first-boot gravity/blocklist fetches would wait on
+            # FTL being up. Give it a real upstream instead.
+            dns:
+              - 1.1.1.1
             environment:
               # Set the appropriate timezone for your location from
               # https://en.wikipedia.org/wiki/List_of_tz_database_time_zones, e.g:
@@ -71,7 +82,7 @@
       environment.etc."${dir}/dnsmasq.d/01-luna.local.conf" = {
         text = ''
           server=/luna.local/#
-          address=/.luna.local/192.168.0.12
+          address=/.luna.local/${piholeIp}
         '';
         mode = "444";
       };
