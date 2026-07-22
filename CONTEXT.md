@@ -45,6 +45,22 @@ _Avoid_: "wine game", "lutris/bottles game" — Proton Tiles run through Steam's
 The browser that owns the system's html/http(s) handlers and the `DEFAULT_BROWSER` session variable. Chromium (ungoogled) is the Default Browser on every host; librewolf is installed alongside but never claims these handlers.
 _Avoid_: assuming the browser a user launches most is the Default Browser — default is specifically the mime/scheme handler owner.
 
+**Printing**:
+Paper printing through CUPS, defined by `nixosModules.printing`. Unqualified "printing" in a NixOS module context always means this.
+_Avoid_: using it for slicing/3D work — that is **3D Printing**, a separate home module.
+
+**3D Printing**:
+The slicer and 2D-art toolchain (orca-slicer, inkscape, gimp) in `homeModules.threeDPrinting`. Fleet-wide, since it rides `isaacConfiguration`. Shares no code, host set or vocabulary with **Printing**.
+_Avoid_: "printing" unqualified.
+
+**Driverless**:
+A printer or scanner driven purely by its advertised IPP Everywhere/AirPrint (printing) or eSCL/AirScan (scanning) capabilities — no PPD, no vendor backend, no `hplip`. The OfficeJet Pro 7740 is Driverless on both halves; see docs/adr/0005.
+_Avoid_: calling a queue Driverless because it needed no manual setup — the test is that no driver package is installed, not that discovery was automatic.
+
+**Discovered Queue**:
+A CUPS print queue cupsd materialises on demand from DNS-SD, as opposed to one declared by `hardware.printers.ensurePrinters`. Its name is generated and may vary, so nothing may hardcode it.
+_Avoid_: assuming a queue name is stable enough for `lp -d`.
+
 ## Relationships
 
 - The **Hermes VM** runs the Hermes Agent gateway on port 5678.
@@ -54,6 +70,9 @@ _Avoid_: assuming the browser a user launches most is the Default Browser — de
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
 - chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
 - Voices of the Void is a **Proton Tile** on cleoDesktop only.
+- **Printing** and scanning are enabled on cleoDesktop and yuroLaptop only; lunaServer is headless and mewoSteamdeck is opt-in.
+- the HP OfficeJet Pro 7740 is reached as a **Discovered Queue**; no host declares it by address.
+- `nssmdns4` is deliberately off wherever **Printing** is enabled, so `.local` names keep resolving through pihole (docs/adr/0005).
 
 ## Example Dialogue
 

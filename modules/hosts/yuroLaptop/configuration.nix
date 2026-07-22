@@ -23,6 +23,9 @@
         self.nixosModules.pipewire
         self.nixosModules.pipewire-5_1-to-4_1
 
+        self.nixosModules.printing
+        self.nixosModules.scanning
+
         self.nixosModules.steam
         self.nixosModules.steamShortcuts
         self.nixosModules.steamGamescopeSession
