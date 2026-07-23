@@ -58,7 +58,7 @@
     };
 
     voxtype = {
-      url = "github:peteonrails/voxtype";
+      url = "github:peteonrails/voxtype?ref=v0.7.2";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
