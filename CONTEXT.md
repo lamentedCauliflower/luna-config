@@ -61,6 +61,10 @@ _Avoid_: calling a queue Driverless because it needed no manual setup — the te
 A CUPS print queue cupsd materialises on demand from DNS-SD, as opposed to one declared by `hardware.printers.ensurePrinters`. Its name is generated and may vary, so nothing may hardcode it.
 _Avoid_: assuming a queue name is stable enough for `lp -d`.
 
+**Async Reprojection**:
+SteamVR's compositor re-warping the last rendered frame to the current head pose when the scene app misses its 90Hz deadline. Needs `CAP_SYS_NICE` on `vrcompositor-launcher`, which lives in the mutable Steam library — so the capability is re-applied by the `steamvr-setcap` path unit on every SteamVR update rather than baked into a store path.
+_Avoid_: reading `0 reprojected` in `vrcompositor.txt` as healthy — it means the feature is off, not that no frame needed it.
+
 ## Relationships
 
 - The **Hermes VM** runs the Hermes Agent gateway on port 5678.
@@ -70,6 +74,7 @@ _Avoid_: assuming a queue name is stable enough for `lp -d`.
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
 - chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
 - Voices of the Void is a **Proton Tile** on cleoDesktop only.
+- `nixosModules.steamVr` is enabled on cleoDesktop only (the HTC Vive and its base stations are wired to it); it layers on `nixosModules.steam` and never replaces it. The HMD's DP output is left out of the Hyprland monitor rules on purpose — Hyprland excludes non-desktop displays so SteamVR can take the panel directly.
 - **Printing** and scanning are enabled on cleoDesktop and yuroLaptop only; lunaServer is headless and mewoSteamdeck is opt-in.
 - the HP OfficeJet Pro 7740 is reached as a **Discovered Queue**; no host declares it by address.
 - `nssmdns4` is deliberately off wherever **Printing** is enabled, so `.local` names keep resolving through pihole (docs/adr/0005).
