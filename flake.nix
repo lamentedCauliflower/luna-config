@@ -57,11 +57,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    voxtype = {
-      url = "github:peteonrails/voxtype?ref=v0.7.2";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     meridian.url = "github:rynfar/meridian";
 
     hermes-agent.url = "github:NousResearch/hermes-agent";

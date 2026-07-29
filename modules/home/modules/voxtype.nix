@@ -1,15 +1,15 @@
-{ inputs, lib, ... }:
+{ lib, ... }:
 {
   flake.homeModules.voxtype =
     { pkgs, ... }:
     {
-      imports = [ inputs.voxtype.homeManagerModules.default ];
-
-      programs.voxtype = {
+      services.voxtype = {
         enable = true;
-        package = inputs.voxtype.packages.${pkgs.stdenv.hostPlatform.system}.vulkan;
-        model.name = "base.en";
-        service.enable = true;
+        package = pkgs.voxtype-vulkan;
+        # Downloaded at runtime by voxtype-model-loader.service.
+        loadModels = [ "base.en" ];
+        wayland.display = "wayland-1";
+        environment.VOXTYPE_VULKAN_DEVICE = "nvidia";
         settings = {
           state_file = "auto";
           hotkey.enabled = false;
@@ -19,6 +19,7 @@
             volume = 0.7;
           };
           whisper = {
+            model = "base.en";
             language = "en";
             context_window_optimization = true;
           };
@@ -31,9 +32,12 @@
 
       home.sessionVariables.VOXTYPE_VULKAN_DEVICE = "nvidia";
 
-      systemd.user.services.voxtype.Service.Environment = [
-        "VOXTYPE_VULKAN_DEVICE=nvidia"
-      ];
+      # Upstream module wants it on default.target; the daemon needs a compositor.
+      systemd.user.services.voxtype = {
+        Unit.After = [ "graphical-session.target" ];
+        Unit.PartOf = lib.mkForce [ "graphical-session.target" ];
+        Install.WantedBy = lib.mkForce [ "graphical-session.target" ];
+      };
 
       xdg.configFile."hypr/voxtype.lua".text = ''
         -- Voxtype speech-to-text keybinds

@@ -14,10 +14,10 @@
         # Obselete
         # self.nixosModules.frigateContainer
         # self.nixosModules.rommContainer
+        # self.nixosModules.litellmContainer
         self.nixosModules.octoprintContainer
         self.nixosModules.giteaContainer
-        self.nixosModules.minecraftContainer
-        self.nixosModules.litellmContainer
+        # self.nixosModules.minecraftContainer
       ];
 
     };
