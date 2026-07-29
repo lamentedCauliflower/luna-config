@@ -9,7 +9,8 @@
     let
       # ~/.steam/steam is a symlink; systemd.paths must watch the real dir.
       steamRoot = "/home/${username}/.local/share/Steam";
-      launcher = "${steamRoot}/steamapps/common/SteamVR/bin/linux64/vrcompositor-launcher";
+      steamVrRoot = "${steamRoot}/steamapps/common/SteamVR";
+      launcher = "${steamVrRoot}/bin/linux64/vrcompositor-launcher";
     in
     {
       # Asynchronous reprojection needs the compositor to raise its own
@@ -51,10 +52,29 @@
         ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="28de", TEST=="power/control", ATTR{power/control}="on"
       '';
 
-      # SteamVR's own Desktop View captures through X11 only, so it renders
-      # black on a Wayland session. wayvr mirrors Wayland outputs into the
-      # headset over OpenVR instead.
-      environment.systemPackages = [ pkgs.wayvr ];
+      # OpenXR apps dlopen libopenxr_loader.so; Steam's own runtime bundles a
+      # copy but nothing outside it does, so nix-built OpenXR programs need the
+      # loader on the system path.
+      environment.systemPackages = [
+        pkgs.openxr-loader
+
+        # SteamVR's own Desktop View captures through X11 only, so it renders
+        # black on a Wayland session. wayvr mirrors Wayland outputs into the
+        # headset over OpenVR/OpenXR instead.
+        pkgs.wayvr
+      ];
+
+      # Point the loader at SteamVR as the OpenXR runtime. Steam writes the same
+      # symlink into ~/.config/openxr/1/ when SteamVR installs, which wins over
+      # this one — but that copy is imperative and dies with the profile, so
+      # declare the XDG_CONFIG_DIRS fallback too. Deliberately a symlink to
+      # Valve's manifest rather than a hand-written copy, so a manifest change
+      # in a SteamVR update is picked up.
+      #
+      # Not set as XR_RUNTIME_JSON: that would hard-pin the runtime and block
+      # switching a single app to monado/wivrn by exporting it per-launch.
+      environment.etc."xdg/openxr/1/active_runtime.json".source =
+        "${steamVrRoot}/steamxr_linux64.json";
     };
 
 }
