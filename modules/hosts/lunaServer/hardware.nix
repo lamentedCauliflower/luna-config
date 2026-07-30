@@ -66,29 +66,12 @@
       };
 
       fileSystems."/mnt/raidDrive" = {
-        device = "/dev/disk/by-uuid/c851e16a-f6e5-4eea-8eb8-d05d44ae0897";
-        fsType = "btrfs";
+        device = "/dev/disk/by-uuid/258983d8-ab67-4984-96df-af4b8ce36478";
+        fsType = "xfs";
         options = [
-          "subvol=base"
-          "compress=zstd"
-        ];
-      };
-
-      fileSystems."/mnt/raidDrive/${username}" = {
-        device = "/dev/disk/by-uuid/c851e16a-f6e5-4eea-8eb8-d05d44ae0897";
-        fsType = "btrfs";
-        options = [
-          "subvol=isaac"
-          "compress=zstd"
-        ];
-      };
-
-      fileSystems."/mnt/raidDrive/media" = {
-        device = "/dev/disk/by-uuid/c851e16a-f6e5-4eea-8eb8-d05d44ae0897";
-        fsType = "btrfs";
-        options = [
-          "subvol=media"
-          "compress=zstd"
+          "defaults"
+          "noatime"
+          "nofail"
         ];
       };
 
