@@ -23,13 +23,14 @@
       # Without it every session logs "0 reprojected" and drops frames instead
       # of reprojecting them.
       #
-      # The no-op branch is load-bearing, not a micro-optimisation: setting the
-      # capability writes a security.capability xattr, which is an inotify
-      # IN_ATTRIB on the launcher, which re-triggers the path unit below. An
-      # unconditional setcap therefore feeds itself until systemd's start rate
-      # limit kills both units.
+      # The no-op branch keeps a re-trigger from writing anything, so setting the
+      # capability cannot generate the inotify event that would trigger the path
+      # unit again.
       systemd.services.steamvr-setcap = {
         description = "Grant CAP_SYS_NICE to SteamVR's compositor launcher";
+        # Runs at boot for the already-installed case; the path unit below only
+        # has to catch later updates.
+        wantedBy = [ "multi-user.target" ];
         unitConfig.ConditionPathExists = launcher;
         serviceConfig = {
           Type = "oneshot";
@@ -45,18 +46,21 @@
       };
 
       # Every SteamVR update rewrites the launcher and wipes its xattrs, so the
-      # capability has to be re-applied on change, not just at boot. PathExists
-      # covers boot (and a fresh SteamVR install); PathChanged covers updates.
-      # PathChanged rather than PathModified only to narrow the trigger to
-      # close-after-write — what actually stops the setcap feedback loop is the
-      # service's own no-op branch, since a re-trigger then writes nothing.
+      # capability has to be re-applied on change, not just at boot.
+      #
+      # Edge-triggered PathChanged only — deliberately NOT PathExists. PathExists
+      # is level-triggered: systemd re-activates the service every time it goes
+      # inactive while the path is still there, which for a oneshot that exits in
+      # milliseconds is an unbroken loop until the start rate limit fails both
+      # units. Watching a path that exists ~always is what path units are worst
+      # at; the boot case belongs on the service's own wantedBy instead.
+      #
+      # A launcher that does not exist yet is still covered: systemd watches the
+      # nearest existing parent, so a fresh SteamVR install trips PathChanged too.
       systemd.paths.steamvr-setcap = {
         description = "Watch SteamVR's compositor launcher for updates";
         wantedBy = [ "multi-user.target" ];
-        pathConfig = {
-          PathExists = launcher;
-          PathChanged = launcher;
-        };
+        pathConfig.PathChanged = launcher;
       };
 
       # vrserver aborts with a watchdog timeout in UpdateControllerRoles when
