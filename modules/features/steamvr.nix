@@ -22,24 +22,40 @@
       #
       # Without it every session logs "0 reprojected" and drops frames instead
       # of reprojecting them.
+      #
+      # The no-op branch is load-bearing, not a micro-optimisation: setting the
+      # capability writes a security.capability xattr, which is an inotify
+      # IN_ATTRIB on the launcher, which re-triggers the path unit below. An
+      # unconditional setcap therefore feeds itself until systemd's start rate
+      # limit kills both units.
       systemd.services.steamvr-setcap = {
         description = "Grant CAP_SYS_NICE to SteamVR's compositor launcher";
         unitConfig.ConditionPathExists = launcher;
         serviceConfig = {
           Type = "oneshot";
-          ExecStart = "${pkgs.libcap}/bin/setcap CAP_SYS_NICE+ep ${launcher}";
+          ExecStart = pkgs.writeShellScript "steamvr-setcap" ''
+            set -eu
+            if ${pkgs.libcap}/bin/getcap ${launcher} | grep -q cap_sys_nice; then
+              echo "cap_sys_nice already set, nothing to do"
+              exit 0
+            fi
+            exec ${pkgs.libcap}/bin/setcap CAP_SYS_NICE+ep ${launcher}
+          '';
         };
       };
 
       # Every SteamVR update rewrites the launcher and wipes its xattrs, so the
       # capability has to be re-applied on change, not just at boot. PathExists
-      # covers boot (and a fresh SteamVR install); PathModified covers updates.
+      # covers boot (and a fresh SteamVR install); PathChanged covers updates.
+      # PathChanged rather than PathModified only to narrow the trigger to
+      # close-after-write — what actually stops the setcap feedback loop is the
+      # service's own no-op branch, since a re-trigger then writes nothing.
       systemd.paths.steamvr-setcap = {
         description = "Watch SteamVR's compositor launcher for updates";
         wantedBy = [ "multi-user.target" ];
         pathConfig = {
           PathExists = launcher;
-          PathModified = launcher;
+          PathChanged = launcher;
         };
       };
 
