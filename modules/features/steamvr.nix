@@ -5,12 +5,37 @@
 { username, ... }:
 {
   flake.nixosModules.steamVr =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     let
       # ~/.steam/steam is a symlink; systemd.paths must watch the real dir.
       steamRoot = "/home/${username}/.local/share/Steam";
       steamVrRoot = "${steamRoot}/steamapps/common/SteamVR";
       launcher = "${steamVrRoot}/bin/linux64/vrcompositor-launcher";
+
+      # Anything that reaches SteamVR from outside the Steam runtime dlopens
+      # Valve's prebuilt vrclient.so, whose unresolved sonames are libGL.so.1,
+      # libEGL.so.1 and libuuid.so.1. Steam's FHS env supplies those; a nix-built
+      # binary does not, and /run/opengl-driver/lib carries only the vendor
+      # implementations (libGLX_nvidia, libEGL_nvidia) — the dispatch stubs those
+      # sonames actually name live in libglvnd. The driver dir is appended anyway
+      # for whatever else the blob dlopens at runtime that ldd cannot see.
+      vrclientLibs = lib.makeLibraryPath [
+        pkgs.libglvnd
+        pkgs.libuuid.lib
+      ] + ":/run/opengl-driver/lib";
+
+      # symlinkJoin, not overrideAttrs: this only needs a wrapper, and rebuilding
+      # wayvr from source to add one would throw away the binary cache.
+      wayvr = pkgs.symlinkJoin {
+        name = "wayvr-steamvr-${pkgs.wayvr.version}";
+        paths = [ pkgs.wayvr ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          for bin in $out/bin/*; do
+            wrapProgram "$bin" --suffix LD_LIBRARY_PATH : "${vrclientLibs}"
+          done
+        '';
+      };
     in
     {
       # Asynchronous reprojection needs the compositor to raise its own
@@ -81,7 +106,7 @@
         # SteamVR's own Desktop View captures through X11 only, so it renders
         # black on a Wayland session. wayvr mirrors Wayland outputs into the
         # headset over OpenVR/OpenXR instead.
-        pkgs.wayvr
+        wayvr
       ];
 
       # Point the loader at SteamVR as the OpenXR runtime. Steam writes the same
