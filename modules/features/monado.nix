@@ -17,12 +17,14 @@
         enable = true;
         # Publishes the runtime manifest to /etc/xdg/openxr/1/.
         defaultRuntime = true;
-        # ...which a writable XDG_CONFIG_DIRS entry still outranks, and Steam
-        # leaves exactly that behind: installing SteamVR writes
-        # ~/.config/openxr/1/active_runtime.json pointing at itself. Without
-        # this, that leftover symlink keeps winning and OpenXR apps silently
-        # keep using SteamVR. The service relinks it on every start.
-        forceDefaultRuntime = true;
+        # Deliberately off, even though it targets the right file. It relinks
+        # ~/.config/openxr/1/active_runtime.json from monado.service's preStart,
+        # but the service is socket-activated: a client has to find Monado to
+        # connect, and a stale SteamVR symlink in ~/.config is exactly what stops
+        # it finding Monado. So it cannot bootstrap out of the state it exists to
+        # fix. Home-manager owns that symlink below instead — one writer, and it
+        # lands at activation rather than at first connection.
+        forceDefaultRuntime = false;
         # highPriority defaults true -> cap_sys_nice for async reprojection.
       };
 
@@ -43,21 +45,31 @@
         pkgs.wayvr
       ];
 
-      # vrpathreg's registry, normally written by SteamVR to point at itself.
-      # Repointing the runtime entry at OpenComposite is what makes an OpenVR
-      # game load the translation layer.
-      #
-      # force because SteamVR already wrote this file imperatively — it is
-      # generated state, never hand-authored, so clobbering it is safe.
-      home-manager.users.${username}.xdg.configFile."openvr/openvrpaths.vrpath" = {
-        force = true;
-        text = builtins.toJSON {
-          version = 1;
-          jsonid = "vrpathreg";
-          runtime = [ "${pkgs.opencomposite}/lib/opencomposite" ];
-          config = [ "/home/${username}/.local/share/Steam/config" ];
-          log = [ "/home/${username}/.local/share/Steam/logs" ];
-          external_drivers = null;
+      # Both files below are runtime-selection state that SteamVR wrote
+      # imperatively into ~/.config, so both need force. Neither is ever
+      # hand-authored, so clobbering them is safe.
+      home-manager.users.${username}.xdg.configFile = {
+        # The OpenXR loader searches XDG_CONFIG_HOME before XDG_CONFIG_DIRS, so
+        # this file — not the /etc/xdg one from defaultRuntime — is what actually
+        # decides the runtime. The /etc/xdg copy stays as the fallback for any
+        # other user.
+        "openxr/1/active_runtime.json" = {
+          force = true;
+          source = "${pkgs.monado}/share/openxr/1/openxr_monado.json";
+        };
+
+        # vrpathreg's registry. Repointing the runtime entry at OpenComposite is
+        # what makes an OpenVR game load the translation layer.
+        "openvr/openvrpaths.vrpath" = {
+          force = true;
+          text = builtins.toJSON {
+            version = 1;
+            jsonid = "vrpathreg";
+            runtime = [ "${pkgs.opencomposite}/lib/opencomposite" ];
+            config = [ "/home/${username}/.local/share/Steam/config" ];
+            log = [ "/home/${username}/.local/share/Steam/logs" ];
+            external_drivers = null;
+          };
         };
       };
 

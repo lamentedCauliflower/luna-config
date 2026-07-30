@@ -66,7 +66,7 @@ The process that owns the headset — drives its panel, tracks poses, composites
 _Avoid_: treating "SteamVR is installed" as "SteamVR is the runtime" — installation and activation are unrelated here.
 
 **OpenComposite**:
-A reimplementation of `openvr_api` that translates OpenVR calls to OpenXR, so a Steam VR game written against OpenVR can run on Monado. Selected by the `runtime` entry of `~/.config/openvr/openvrpaths.vrpath`, not by anything inside the game.
+A reimplementation of `openvr_api` that translates OpenVR calls to OpenXR, so a Steam VR game written against OpenVR can run on Monado. Selected by the `runtime` entry of `~/.config/openvr/openvrpaths.vrpath`, not by anything inside the game. Covers scene apps only: an OpenVR *overlay* app aborts with `unsupported apptype 2`, so overlays must talk OpenXR directly.
 _Avoid_: calling it a compatibility layer for Windows titles — it is orthogonal to Proton and sits on the API boundary, not the OS boundary.
 
 **Async Reprojection**:
