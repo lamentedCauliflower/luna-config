@@ -29,7 +29,7 @@
         self.nixosModules.steam
         self.nixosModules.steamShortcuts
         self.nixosModules.steamGamescopeSession
-        self.nixosModules.steamVr
+        self.nixosModules.monado
         self.nixosModules.minecraft
         self.nixosModules.votv
         self.nixosModules.starsector

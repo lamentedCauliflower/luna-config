@@ -61,9 +61,17 @@ _Avoid_: calling a queue Driverless because it needed no manual setup — the te
 A CUPS print queue cupsd materialises on demand from DNS-SD, as opposed to one declared by `hardware.printers.ensurePrinters`. Its name is generated and may vary, so nothing may hardcode it.
 _Avoid_: assuming a queue name is stable enough for `lp -d`.
 
+**XR Runtime**:
+The process that owns the headset — drives its panel, tracks poses, composites submitted frames. Exactly one is active per host, selected by `/etc/xdg/openxr/1/active_runtime.json`. cleoDesktop's is Monado; SteamVR is still installed in the Steam library but no longer drives anything.
+_Avoid_: treating "SteamVR is installed" as "SteamVR is the runtime" — installation and activation are unrelated here.
+
+**OpenComposite**:
+A reimplementation of `openvr_api` that translates OpenVR calls to OpenXR, so a Steam VR game written against OpenVR can run on Monado. Selected by the `runtime` entry of `~/.config/openvr/openvrpaths.vrpath`, not by anything inside the game.
+_Avoid_: calling it a compatibility layer for Windows titles — it is orthogonal to Proton and sits on the API boundary, not the OS boundary.
+
 **Async Reprojection**:
-SteamVR's compositor re-warping the last rendered frame to the current head pose when the scene app misses its 90Hz deadline. Needs `CAP_SYS_NICE` on `vrcompositor-launcher`, which lives in the mutable Steam library — so the capability is re-applied by the `steamvr-setcap` path unit on every SteamVR update rather than baked into a store path.
-_Avoid_: reading `0 reprojected` in `vrcompositor.txt` as healthy — it means the feature is off, not that no frame needed it.
+The **XR Runtime**'s compositor re-warping the last rendered frame to the current head pose when the scene app misses its 90Hz deadline. Needs `CAP_SYS_NICE` on the compositor, which is why the runtime choice changes how it is granted: Monado gets it declaratively via `security.wrappers`, whereas SteamVR's compositor is a mutable file in the Steam library and needed a setcap re-applied on every update.
+_Avoid_: reading `0 reprojected` in a compositor log as healthy — it means the feature is off, not that no frame needed it.
 
 ## Relationships
 
@@ -74,7 +82,11 @@ _Avoid_: reading `0 reprojected` in `vrcompositor.txt` as healthy — it means t
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
 - chromium is the **Default Browser**; librewolf mirrors chromium's config (extensions, 4get search, stylix theme) but does not take default handlers.
 - Voices of the Void is a **Proton Tile** on cleoDesktop only.
-- `nixosModules.steamVr` is enabled on cleoDesktop only (the HTC Vive and its base stations are wired to it); it layers on `nixosModules.steam` and never replaces it. The HMD's DP output is left out of the Hyprland monitor rules on purpose — Hyprland excludes non-desktop displays so SteamVR can take the panel directly.
+- cleoDesktop is the only VR host (the HTC Vive and its base stations are wired to it). Its **XR Runtime** is Monado, via `nixosModules.monado`.
+- `nixosModules.monado` and `nixosModules.steamVr` are mutually exclusive: both declare `/etc/xdg/openxr/1/active_runtime.json`, so importing both is an eval conflict rather than a silently wrong runtime. Switching runtime is one line in a host's `imports`. Either layers on `nixosModules.steam` and never replaces it.
+- Monado reaches the Vive's lighthouse tracking through libsurvive, which `pkgs.monado` is built against. This is the tradeoff of the switch: SteamVR's lighthouse driver is more robust on this exact hardware.
+- **OpenComposite** is what lets OpenVR-era Steam VR titles run on Monado; without it they find no runtime at all.
+- The HMD's DP output is left out of the Hyprland monitor rules on purpose — Hyprland excludes non-desktop displays so the **XR Runtime** can take the panel directly.
 - **Printing** and scanning are enabled on cleoDesktop and yuroLaptop only; lunaServer is headless and mewoSteamdeck is opt-in.
 - the HP OfficeJet Pro 7740 is reached as a **Discovered Queue**; no host declares it by address.
 - `nssmdns4` is deliberately off wherever **Printing** is enabled, so `.local` names keep resolving through pihole (docs/adr/0005).
