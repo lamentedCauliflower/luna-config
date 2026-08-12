@@ -96,7 +96,7 @@
           libxi
           libSM
           libICE
-          gnome2.GConf
+          # gnome2.GConf removed upstream (deprecated); no nix-ld replacement needed
           nspr
           nss
           cups
