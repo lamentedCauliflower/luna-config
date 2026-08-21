@@ -26,12 +26,15 @@
         hyprpaper
         hyprcursor
         playerctl
+        brightnessctl
         quickshell
         xdg-desktop-portal-hyprland
         xdg-desktop-portal-gtk
         gtk3
         rofi
       ];
+
+      services.udev.packages = [ pkgs.brightnessctl ];
 
       qt.enable = true;
 

@@ -88,6 +88,7 @@
         extraGroups = [
           "wheel"
           "pipewire"
+          "video"
         ];
         shell = pkgs.zsh;
       };
