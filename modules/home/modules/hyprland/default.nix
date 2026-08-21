@@ -71,7 +71,7 @@
             follow_mouse   = 0,
             sensitivity    = 0,
             force_no_accel = false,
-            touchpad = { natural_scroll = false },
+            touchpad = { natural_scroll = false, disable_while_typing = false },
           },
         })
 

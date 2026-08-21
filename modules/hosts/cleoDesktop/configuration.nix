@@ -36,6 +36,7 @@
 
         self.nixosModules.nfsMount
         self.nixosModules.hyprland
+        self.nixosModules.bluetooth
         self.nixosModules.isaacHomeManager
 
         self.nixosModules.nixDev
