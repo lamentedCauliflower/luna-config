@@ -18,8 +18,13 @@
       # squashfs, so appimageTools can't extract it ("no valid SQUASHFS
       # superblock"). Extract the DwarFS image with dwarfsextract (offset
       # auto-detected, so it survives version bumps), then FHS-wrap the AppDir.
+      # dwarfs bundles an old fbthrift/folly copy that doesn't build against
+      # nixpkgs' current fmt (12.x dropped APIs it relies on); fmt_10 matches
+      # what it was written against.
+      dwarfs = pkgs.dwarfs.override { fmt = pkgs.fmt_10; };
+
       edenAppDir = pkgs.runCommand "eden-${version}-appdir" {
-        nativeBuildInputs = [ pkgs.dwarfs ];
+        nativeBuildInputs = [ dwarfs ];
       } ''
         mkdir -p $out
         dwarfsextract --input=${src} --image-offset=auto --output=$out

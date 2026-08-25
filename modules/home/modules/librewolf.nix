@@ -55,7 +55,7 @@
             # Mirror chromium's default search.
             search = {
               force = true;
-              default = "Google";
+              default = "google";
             };
           };
         };
