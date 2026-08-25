@@ -63,10 +63,10 @@
       programs.chromium = {
         enable = true;
         defaultSearchProviderEnabled = true;
-        defaultSearchProviderSearchURL = "https://4get.luna.local/web?s={searchTerms}";
+        defaultSearchProviderSearchURL = "https://www.google.com/search?q={searchTerms}";
         extraOpts = {
-          DefaultSearchProviderName = "4get";
-          DefaultSearchProviderKeyword = "4get";
+          DefaultSearchProviderName = "Google";
+          DefaultSearchProviderKeyword = "google";
           BrowserThemeColor = config.home-manager.users.${username}.lib.stylix.colors.withHashtag.base00;
         };
       };

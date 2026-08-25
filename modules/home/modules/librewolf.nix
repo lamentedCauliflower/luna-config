@@ -52,14 +52,10 @@
             name = username;
             isDefault = true;
 
-            # Mirror chromium's 4get default search.
+            # Mirror chromium's default search.
             search = {
               force = true;
-              default = "4get";
-              engines."4get" = {
-                urls = [ { template = "https://4get.luna.local/web?s={searchTerms}"; } ];
-                definedAliases = [ "@4g" ];
-              };
+              default = "Google";
             };
           };
         };
