@@ -17,7 +17,7 @@
         # self.nixosModules.fourgetContainer # 4get dead, back to google
         self.nixosModules.octoprintContainer
         self.nixosModules.giteaContainer
-        # self.nixosModules.minecraftContainer
+        self.nixosModules.minecraftContainer
       ];
 
     };
