@@ -61,7 +61,7 @@
               - ${packRoot}/packwiz:/packwiz:ro
 
           minecraft-server:
-            image: itzg/minecraft-server:java21
+            image: itzg/minecraft-server
             container_name: minecraft-server
             pull_policy: daily
             restart: unless-stopped
@@ -85,7 +85,6 @@
               EULA: "TRUE"
               TYPE: NEOFORGE
               VERSION: "1.21.1"
-              NEOFORGE_VERSION: "${neoforgeVersion}"
               PACKWIZ_URL: "http://packwiz:8080/pack.toml"
 
               INIT_MEMORY: 2G
