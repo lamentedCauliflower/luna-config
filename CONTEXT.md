@@ -73,6 +73,14 @@ _Avoid_: calling it a compatibility layer for Windows titles — it is orthogona
 The **XR Runtime**'s compositor re-warping the last rendered frame to the current head pose when the scene app misses its 90Hz deadline. Needs `CAP_SYS_NICE` on the compositor, which is why the runtime choice changes how it is granted: Monado gets it declaratively via `security.wrappers`, whereas SteamVR's compositor is a mutable file in the Steam library and needed a setcap re-applied on every update.
 _Avoid_: reading `0 reprojected` in a compositor log as healthy — it means the feature is off, not that no frame needed it.
 
+**Stream Session**:
+The `streamer` user's headless Plasma session on cleoDesktop, started at boot by lingering with nobody logged in, that Sunshine captures and streams to Moonlight. Distinct from every session a human uses: it holds no seat, no VT and no connector, and its Steam library and Steam login are its own.
+_Avoid_: calling it a "remote desktop" (nothing is being mirrored — the session exists only to be streamed), or conflating it with **Desktop Mode**, which is mewoSteamdeck's GNOME session.
+
+**Virtual Output**:
+The framebuffer `kwin_wayland --virtual` renders into, fixed at 1920x1080 when the compositor starts. It is not a display: no DRM device, no CRTC, no EDID, nothing a monitor could ever show. Its geometry cannot change without restarting the compositor, and Sunshine's `output_name` is global, so there is exactly one per **Stream Session**.
+_Avoid_: "dummy plug", "fake monitor", "headless display" — all three imply a connector that this deliberately does not use.
+
 ## Relationships
 
 - The **Hermes VM** runs the Hermes Agent gateway on port 5678.
@@ -90,6 +98,12 @@ _Avoid_: reading `0 reprojected` in a compositor log as healthy — it means the
 - **Printing** and scanning are enabled on cleoDesktop and yuroLaptop only; lunaServer is headless and mewoSteamdeck is opt-in.
 - the HP OfficeJet Pro 7740 is reached as a **Discovered Queue**; no host declares it by address.
 - `nssmdns4` is deliberately off wherever **Printing** is enabled, so `.local` names keep resolving through pihole (docs/adr/0005).
+- cleoDesktop runs a **Stream Session** for game streaming; Sunshine captures its **Virtual Output** through KDE screencasting and Moonlight on mewoSteamdeck consumes it.
+- the **Stream Session** cannot capture a GNOME session: Sunshine has no xdg-desktop-portal backend, which is the whole reason it is Plasma (docs/adr/0006).
+- `nixosModules.gameStreaming` forces `services.displayManager.defaultSession = "hyprland"`, because enabling Plasma would otherwise move ly's default login session away from Hyprland.
+- mewoSteamdeck is the streaming client: `nixosModules.moonlight` installs Moonlight and surfaces it as a **Game Mode Tile**, so the **Stream Session** on cleoDesktop is reachable from Gaming Mode without entering **Desktop Mode**.
+- the **Stream Session** runs as `streamer`, never as isaac, because Steam is single-instance per user and would otherwise capture a `steam` launched at the desk.
+- `steamShortcuts` is bound to isaac, so the **Stream Session** has no **Non-Steam Shortcuts** and no **Proton Tiles**.
 
 ## Example Dialogue
 

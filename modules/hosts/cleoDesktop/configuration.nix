@@ -29,6 +29,7 @@
         self.nixosModules.steam
         self.nixosModules.steamShortcuts
         self.nixosModules.steamGamescopeSession
+        self.nixosModules.gameStreaming
         self.nixosModules.monado
         self.nixosModules.minecraft
         self.nixosModules.votv
@@ -51,6 +52,18 @@
 
         self.nixosModules.allEmulators
       ];
+
+      # The Stream Session (nixosModules.gameStreaming) needs an audio graph
+      # that is not isaac's. System-wide PipeWire gives every user one shared
+      # graph, so streamed game audio would come out of the desk speakers and
+      # Sunshine would capture whatever the desk is playing. Per-user PipeWire
+      # restores the isolation structurally: `streamer` is lingering and has no
+      # logind seat, so it gets no /dev/snd ACLs and its graph contains only the
+      # null sink declared for it — nothing it plays can reach the speakers.
+      # isaac keeps the /etc/pipewire config (including the 5.1->4.1 filter
+      # chain) and gains device access through its seat ACLs as before.
+      # See docs/adr/0006.
+      services.pipewire.systemWide = false;
 
       hostConfig.bootUpdate = {
         enable = true;
@@ -109,6 +122,11 @@
         extraGroups = [
           "wheel"
           "pipewire"
+          # nixosModules.gameStreaming drops the uaccess tag from /dev/uinput so
+          # the headless Stream Session can create virtual input devices at all
+          # (see docs/adr/0006). That also ends the per-seat ACL isaac relied on
+          # for Steam Input, so isaac takes the group instead.
+          "uinput"
         ];
         shell = pkgs.zsh;
       };

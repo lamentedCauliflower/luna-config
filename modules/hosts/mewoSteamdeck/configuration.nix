@@ -21,6 +21,7 @@
 
         self.nixosModules.steam
         self.nixosModules.steamShortcuts
+        self.nixosModules.moonlight
         self.nixosModules.minecraft
 
         self.nixosModules.nfsMount
