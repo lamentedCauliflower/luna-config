@@ -52,6 +52,19 @@
         . /etc/set-environment
         export PATH=${pkgs.kdePackages.kwin}/bin:$PATH
         if [ "$(${pkgs.coreutils}/bin/id -un)" = ${lib.escapeShellArg streamUser} ]; then
+          # Fail loudly instead of falling back to software compositing. A
+          # lingering user's session starts at boot and can lose the race with
+          # the GPU device nodes appearing; KWin then fails EGL once, silently
+          # drops to QPainter, and stays there for the life of the process.
+          # KDE screencast refuses a QPainter session ("Unsupported compositing
+          # type"), so Sunshine finds no display, every encoder probe fails, and
+          # Moonlight reports a bare 401 several layers away from the cause.
+          # With KWIN_COMPOSE set, kwin quits rather than falling back
+          # (kwin src/compositor.cpp: "Could not fulfill the requested
+          # compositing mode ... Exiting"), and stream-session.service's
+          # Restart=always simply tries again until the GPU is ready. The retry
+          # is the mechanism, which is why there is no sleep or device-wait here.
+          export KWIN_COMPOSE=O
           exec ${pkgs.kdePackages.kwin}/bin/kwin_wayland_wrapper \
             --xwayland \
             --virtual \
@@ -228,6 +241,12 @@
             ]
           );
         };
+        # The boot race above is resolved by restarting, so the rate limiter
+        # must not give up while the GPU is still settling. Generous but finite:
+        # a genuinely broken EGL setup should eventually stop and say so rather
+        # than respawn Plasma forever.
+        startLimitIntervalSec = 600;
+        startLimitBurst = 100;
         serviceConfig = {
           ExecStart = "${sessionStart}";
           Restart = "always";
