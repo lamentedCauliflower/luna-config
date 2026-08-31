@@ -52,6 +52,12 @@
         . /etc/set-environment
         export PATH=${pkgs.kdePackages.kwin}/bin:$PATH
         if [ "$(${pkgs.coreutils}/bin/id -un)" = ${lib.escapeShellArg streamUser} ]; then
+          # Instrumentation, not configuration. After a cold boot this session
+          # comes up with "Compositing Type: QPainter" (confirmed via KWin's own
+          # supportInformation), while restarting it yields OpenGL -- so EGL
+          # fails at startup for a reason nothing currently logs. KWin is silent
+          # about it at default log levels. Remove once the cause is known.
+          export QT_LOGGING_RULES="kwin_*.debug=true"
           exec ${pkgs.kdePackages.kwin}/bin/kwin_wayland_wrapper \
             --xwayland \
             --virtual \
@@ -73,7 +79,38 @@
       # user manager, so sunshine.service inherits it too.
       sessionStart = pkgs.writeShellScript "stream-session-start" ''
         . /etc/set-environment
-        exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland
+        ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland &
+        plasma=$!
+
+        # A session that fell back to software compositing is useless here: KDE
+        # screencast refuses it ("Unsupported compositing type"), so Sunshine
+        # finds no display, every encoder probe fails, and the client sees a
+        # bare 401. That is exactly what a cold boot produces, while restarting
+        # the session comes up on OpenGL. Rather than guess how long the GPU
+        # needs, ask KWin what it actually got and restart if it is wrong --
+        # the check is the property we care about, not a proxy for it.
+        for _ in $(${pkgs.coreutils}/bin/seq 1 60); do
+          ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin supportInformation \
+            2>/dev/null | ${pkgs.gnugrep}/bin/grep -q 'Compositing Type:' && break
+          ${pkgs.coreutils}/bin/sleep 1
+        done
+
+        compositing=$(${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin supportInformation \
+          2>/dev/null | ${pkgs.gnugrep}/bin/grep -m1 'Compositing Type:')
+
+        case "$compositing" in
+          *OpenGL*)
+            echo "stream-session: $compositing" >&2
+            ;;
+          *)
+            echo "stream-session: ''${compositing:-Compositing Type: unknown} - not usable for screencast, restarting" >&2
+            kill $plasma 2>/dev/null || true
+            wait $plasma 2>/dev/null || true
+            exit 1
+            ;;
+        esac
+
+        wait $plasma
       '';
 
       # nixpkgs wraps Sunshine: bin/sunshine is a makeWrapper shell script that
@@ -228,6 +265,12 @@
             ]
           );
         };
+        # The self-heal above works by failing and being restarted, so the rate
+        # limiter must not give up while the GPU is still settling -- but stays
+        # finite so a permanently broken EGL setup stops and says so rather than
+        # respawning Plasma forever.
+        startLimitIntervalSec = 600;
+        startLimitBurst = 100;
         serviceConfig = {
           ExecStart = "${sessionStart}";
           Restart = "always";
