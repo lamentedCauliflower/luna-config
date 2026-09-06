@@ -24,10 +24,6 @@
           };
 
           vim.autocomplete.nvim-cmp.enable = true;
-          vim.assistant.copilot = {
-            enable = true;
-            cmp.enable = true;
-          };
           vim.telescope.enable = true;
 
           vim.statusline.lualine.enable = true;
