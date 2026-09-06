@@ -52,12 +52,6 @@
         . /etc/set-environment
         export PATH=${pkgs.kdePackages.kwin}/bin:$PATH
         if [ "$(${pkgs.coreutils}/bin/id -un)" = ${lib.escapeShellArg streamUser} ]; then
-          # Instrumentation, not configuration. After a cold boot this session
-          # comes up with "Compositing Type: QPainter" (confirmed via KWin's own
-          # supportInformation), while restarting it yields OpenGL -- so EGL
-          # fails at startup for a reason nothing currently logs. KWin is silent
-          # about it at default log levels. Remove once the cause is known.
-          export QT_LOGGING_RULES="kwin_*.debug=true"
           exec ${pkgs.kdePackages.kwin}/bin/kwin_wayland_wrapper \
             --xwayland \
             --virtual \
@@ -77,40 +71,33 @@
       # environment is exactly what a login would have done, and
       # startplasma's syncDBusEnvironment() then pushes it on to the systemd
       # user manager, so sunshine.service inherits it too.
+      #
+      # The wait is the whole reason this is a script rather than an ExecStart
+      # straight to startplasma-wayland. KWin's VirtualBackend only offers
+      # OpenGL compositing if it can open a DRM render node; with none present
+      # it reports "Configured compositor not supported by Platform. Falling
+      # back to defaults" and comes up on QPainter. KDE screencast then refuses
+      # the session, Sunshine finds no display, every encoder probe fails and
+      # the client sees a bare 401. `streamer` lingers, so user@.service starts
+      # this at the very start of boot -- measured on cleoDesktop, KWin gave up
+      # 2.1s *before* nvidia-drm finished registering /dev/dri/renderD128. A
+      # systemd After= on dev-dri-renderD128.device would say this better, but
+      # the user manager has no device units, so the wait lives here.
+      # Deliberately fails rather than proceeding, because a QPainter session
+      # is silently useless while a dead unit says so in the journal.
       sessionStart = pkgs.writeShellScript "stream-session-start" ''
         . /etc/set-environment
-        ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland &
-        plasma=$!
 
-        # A session that fell back to software compositing is useless here: KDE
-        # screencast refuses it ("Unsupported compositing type"), so Sunshine
-        # finds no display, every encoder probe fails, and the client sees a
-        # bare 401. That is exactly what a cold boot produces, while restarting
-        # the session comes up on OpenGL. Rather than guess how long the GPU
-        # needs, ask KWin what it actually got and restart if it is wrong --
-        # the check is the property we care about, not a proxy for it.
         for _ in $(${pkgs.coreutils}/bin/seq 1 60); do
-          ${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin supportInformation \
-            2>/dev/null | ${pkgs.gnugrep}/bin/grep -q 'Compositing Type:' && break
+          [ -e /dev/dri/renderD128 ] && break
           ${pkgs.coreutils}/bin/sleep 1
         done
+        if [ ! -e /dev/dri/renderD128 ]; then
+          echo "stream-session: /dev/dri/renderD128 never appeared; KWin would fall back to QPainter" >&2
+          exit 1
+        fi
 
-        compositing=$(${pkgs.kdePackages.qttools}/bin/qdbus org.kde.KWin /KWin supportInformation \
-          2>/dev/null | ${pkgs.gnugrep}/bin/grep -m1 'Compositing Type:')
-
-        case "$compositing" in
-          *OpenGL*)
-            echo "stream-session: $compositing" >&2
-            ;;
-          *)
-            echo "stream-session: ''${compositing:-Compositing Type: unknown} - not usable for screencast, restarting" >&2
-            kill $plasma 2>/dev/null || true
-            wait $plasma 2>/dev/null || true
-            exit 1
-            ;;
-        esac
-
-        wait $plasma
+        exec ${pkgs.kdePackages.plasma-workspace}/bin/startplasma-wayland
       '';
 
       # nixpkgs wraps Sunshine: bin/sunshine is a makeWrapper shell script that
@@ -239,6 +226,14 @@
       #   sudo systemctl restart user@$(id -u streamer).service
       # A reboot does the same. This is also why a config change can look like
       # "switched but cannot connect".
+      #
+      # Restarting *this* unit is not the same thing and is not enough to
+      # restart the compositor. startplasma-wayland starts the session's units
+      # through the systemd user manager and then exits its role as their
+      # parent, so plasma-kwin_wayland.service outlives this unit: killing
+      # stream-session.service leaves the old KWin running, and starting it
+      # again finds that unit already active and does nothing. Only
+      # `systemctl restart user@1001.service` (or a reboot) replaces KWin.
       systemd.user.services.stream-session = {
         description = "Headless Plasma session for game streaming";
         # Global unit, so keep it out of every human's session. Unlike the kwin
@@ -265,12 +260,6 @@
             ]
           );
         };
-        # The self-heal above works by failing and being restarted, so the rate
-        # limiter must not give up while the GPU is still settling -- but stays
-        # finite so a permanently broken EGL setup stops and says so rather than
-        # respawning Plasma forever.
-        startLimitIntervalSec = 600;
-        startLimitBurst = 100;
         serviceConfig = {
           ExecStart = "${sessionStart}";
           Restart = "always";
