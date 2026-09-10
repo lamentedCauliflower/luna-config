@@ -234,10 +234,23 @@
           settings.main = {
             modules-right = [
               "mpd"
+              "pulseaudio"
               "clock"
               "battery"
             ];
             modules-left = [ "hyprland/workspaces" ];
+            pulseaudio = {
+              format = "{icon} {volume}%";
+              format-muted = "󰝟 muted";
+              format-icons.default = [
+                "󰕿"
+                "󰖀"
+                "󰕾"
+              ];
+              scroll-step = 5;
+              on-click = "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+              tooltip-format = "{desc}: {volume}%";
+            };
           };
         };
 
