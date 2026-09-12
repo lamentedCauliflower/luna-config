@@ -54,6 +54,10 @@
         package = config.boot.kernelPackages.nvidiaPackages.production;
       };
 
+      # CDI specs for the GPU so containers can claim it with
+      # `--device nvidia.com/gpu=all` (docker 25+ speaks CDI natively).
+      hardware.nvidia-container-toolkit.enable = true;
+
       hardware.opentabletdriver.enable = true;
 
       hardware.graphics = {
