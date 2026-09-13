@@ -4,9 +4,17 @@ NixOS flake configuration for lunaServer and related host services.
 
 ## Language
 
+**Hermes Stack**:
+The docker compose stack on lunaServer that runs the Hermes Agent, from the upstream `nousresearch/hermes-agent` image. Exactly one container, holding every **Hermes Profile**; all mutable state is the single host directory bind-mounted at `/opt/data`.
+_Avoid_: "the hermes container**s**" — the plural is the shape this deliberately does not have; also microvm, hernes-vm.
+
+**Hermes Profile**:
+One independently-configured agent inside the **Hermes Stack** — its own config, sessions, memories, skills and optionally its own OpenAI-compatible API port, supervised as its own s6 service slot. A profile is created by `hermes profile create` at runtime, never by adding a container. `default` is the profile Hermes ships with.
+_Avoid_: treating a profile as a deployment unit; two gateway processes sharing a data dir corrupt it, which is exactly what "a container per profile" would do.
+
 **Hermes VM**:
-A Debian virtual machine on lunaServer dedicated to running the Hermes Agent gateway.
-_Avoid_: microvm, hernes-vm
+The retired Debian virtual machine on lunaServer that used to run the Hermes Agent gateway. Deprecated by docs/adr/0007; `modules/features/hermes-vm.nix` still exists but no host imports it, and it survives only until its qcow2 is drained.
+_Avoid_: using it for the current deployment — that is the **Hermes Stack**; also microvm, hernes-vm.
 
 **Secret**:
 A credential (password, API key, sync key) that must never appear in the git repo unencrypted nor in any host's world-readable nix store.
@@ -83,8 +91,10 @@ _Avoid_: "dummy plug", "fake monitor", "headless display" — all three imply a 
 
 ## Relationships
 
-- The **Hermes VM** runs the Hermes Agent gateway on port 5678.
-- lunaServer reverse-proxies `hermes.luna.local` to the **Hermes VM**.
+- The **Hermes Stack** runs every **Hermes Profile** in one container; its dashboard on 9119 fronts all of them at once, and each profile's API server gets its own port.
+- lunaServer reverse-proxies `hermes.luna.local` to the **Hermes Stack**'s dashboard. Every published port binds `127.0.0.1`, so caddy is the only way in and an API server with no `API_SERVER_KEY` is not LAN-reachable.
+- The **Hermes Stack**'s API keys live in its data dir's `.env`, not in `secrets/secrets.yaml` — the one service credential on lunaServer that is not a **Secret** in the sops sense (docs/adr/0007).
+- `nixosModules.hermesVm` and `nixosModules.hermesContainer` are mutually exclusive: both declare the `hermes.luna.local` caddy vhost, so importing both is an eval conflict rather than a silently wrong backend.
 - mewoSteamdeck boots into **Gaming Mode**; **Desktop Mode** is only reachable from inside it.
 - chromium and librewolf are each surfaced as a **Non-Steam Shortcut** on every Steam host (mewoSteamdeck, cleoDesktop, yuroLaptop).
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.
@@ -107,11 +117,12 @@ _Avoid_: "dummy plug", "fake monitor", "headless display" — all three imply a 
 
 ## Example Dialogue
 
-> **Dev:** "Should the Hermes Agent run in a container or the Hermes VM?"
-> **Domain expert:** "Use the Hermes VM because it needs systemd, hard memory limits, snapshots, and its own LAN IP."
+> **Dev:** "I need a second agent with its own config. Do I add a second Hermes container?"
+> **Domain expert:** "No — add a **Hermes Profile**. The stack is one container on purpose; two gateways on one data dir shred the sessions. Give it a port in the module's `profiles` attrset and the s6 slot is created for you."
 
 ## Flagged Ambiguities
 
-- "microvm" originally referred to a small Debian VM, but the chosen implementation is a libvirt/qemu Debian VM named **Hermes VM**.
-- "hernes-vm" was used once as a typo; the canonical component name is **Hermes VM** and the implementation name is `hermes-vm`.
-- "LTS" was used while discussing the guest OS; resolved to Debian stable, not Ubuntu LTS.
+- "microvm" originally referred to a small Debian VM; that became the libvirt/qemu **Hermes VM**, which is now retired in favour of the **Hermes Stack**.
+- "hernes-vm" was used once as a typo; the canonical retired component is **Hermes VM**, implementation name `hermes-vm`.
+- "LTS" was used while discussing the guest OS; resolved to Debian stable, not Ubuntu LTS. Moot since docs/adr/0007 — the image is `debian:13.4`-based, so the guest OS is the same either way.
+- "profile" is overloaded across this repo's tooling; in any Hermes context it means a **Hermes Profile** and never a shell, browser or nix profile.

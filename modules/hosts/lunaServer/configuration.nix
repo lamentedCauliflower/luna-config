@@ -29,7 +29,9 @@
         self.nixosModules.basicUtils
         self.nixosModules.nixDev
         self.nixosModules.libVirt
-        self.nixosModules.hermesVm
+        # Deprecated: the Hermes Agent moved to nixosModules.hermesContainer,
+        # pulled in by dockerFullStack above. See docs/adr/0007.
+        # self.nixosModules.hermesVm
 
         self.nixosModules.ankiServer
         self.nixosModules.syncthing

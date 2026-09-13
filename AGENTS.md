@@ -53,9 +53,13 @@ Uses `nh` (not raw `nixos-rebuild`). `NH_FLAKE` is set to `/mnt/raidDrive/isaac/
 
 There is no lint/format/typecheck/CI. Verify changes by building the affected host before committing.
 
-## Hermes VM (domain term — get it right)
+## Hermes Stack (domain term — get it right)
 
-Hermes Agent gateway runs in a **Debian libvirt/qemu VM** named `hermes-vm` (`modules/features/hermes-vm.nix`), not a container or NixOS guest. Listens on port 5678; lunaServer reverse-proxies `hermes.luna.local` to it. Rationale: ADR `docs/adr/0001-use-debian-libvirt-vm-for-hermes-agent.md`. Canonical name is "Hermes VM"; avoid `microvm`, `hernes-vm`. See `CONTEXT.md` for the full glossary.
+Hermes Agent runs as a docker compose stack from the upstream `nousresearch/hermes-agent` image (`modules/containers/hermes.nix`, `hermesContainer`, reached through `dockerFullStack`). **One container**: each **Hermes Profile** is a supervised gateway (s6 slot) inside it, never a container each — two gateway processes on one data dir corrupt sessions and memories. Profiles are declared in the module's `profiles` attrset, which drives published ports and each profile's `API_SERVER_*` keys; `hermes profile create` itself runs at start because s6 slots only exist at runtime.
+
+State is `/var/lib/stacks/hermes` (uid 10000, 0700), including the `.env` holding every API key — deliberately **not** sops, see ADR 0007. Ports publish to `127.0.0.1` only; caddy fronts the dashboard (9119) at `hermes.luna.local`. `/var/run/docker.sock` is never mounted.
+
+The **Hermes VM** (`modules/features/hermes-vm.nix`, ADR 0001) is deprecated and imported by nothing. Do not add it back, and never import it alongside `hermesContainer` — both declare `hermes.luna.local`, so it is an eval conflict. Rationale for the move: ADR `docs/adr/0007-hermes-agent-in-official-docker-image.md`. Avoid `microvm`, `hernes-vm`. See `CONTEXT.md` for the full glossary.
 
 ## Secrets
 
@@ -63,7 +67,7 @@ Managed by **sops-nix** (see `docs/adr/0002`). `secrets/secrets.yaml` is age-enc
 
 - Edit secrets: `nix run nixpkgs#sops -- secrets/secrets.yaml` (admin identity lives in `~/.config/sops/age/keys.txt`; sops finds it automatically).
 - Each consumer module declares its own `sops.secrets.<name>` next to its usage; `sopsBase` (`modules/features/sops-base.nix`) sets the default sops file and is imported per host.
-- Docker stacks consume secrets via `sops.templates."<svc>.env"` env-files referenced from the compose yaml (`env_file:`), with `restartUnits` so secret changes restart the service. Exception: romm uses `docker compose --env-file` interpolation to keep container env byte-identical to its pre-sops mariadb init (see comment in `romm.nix`).
+- Docker stacks consume secrets via `sops.templates."<svc>.env"` env-files referenced from the compose yaml (`env_file:`), with `restartUnits` so secret changes restart the service. Exception: romm uses `docker compose --env-file` interpolation to keep container env byte-identical to its pre-sops mariadb init (see comment in `romm.nix`). Second exception: the Hermes Stack keeps its API keys in its own data dir `.env` (0600, uid 10000) rather than sops — see ADR 0007 for why, and do not "fix" it.
 - Home-manager consumers read `/run/secrets/...` paths; the system-side declarations live in `modules/home/users/isaac/default.nix` (`owner = username`).
 - Adding a host: `ssh-keyscan -t ed25519 <host> | nix run nixpkgs#ssh-to-age`, add to `.sops.yaml`, run `sops updatekeys secrets/secrets.yaml`.
 

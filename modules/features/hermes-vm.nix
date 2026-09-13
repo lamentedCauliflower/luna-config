@@ -1,3 +1,10 @@
+# DEPRECATED. Superseded by `nixosModules.hermesContainer`
+# (modules/containers/hermes.nix, docs/adr/0007). No host imports this module.
+#
+# Kept so the VM can still be booted to copy the agent's state out of its qcow2
+# at /mnt/raidDrive/vms/hermes. Importing it alongside hermesContainer is an
+# eval conflict, not a silent double-bind: both declare the caddy vhost
+# hermes.<dnsName>.local. Delete this file and the vmDir once migration is done.
 { ... }:
 {
   flake.nixosModules.hermesVm =
