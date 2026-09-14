@@ -58,7 +58,6 @@
         gcc
         docker
         docker-compose
-        beads
       ];
 
     };
