@@ -65,6 +65,10 @@
           enable = true;
           device = "nodev";
           efiSupport = true;
+          # /boot (ESP) is only 549M and each kernel generation costs ~57M of
+          # bzImage + initrd, so an unbounded menu fills it and every
+          # bootloader install then fails. Bound the retained generations.
+          configurationLimit = 10;
         };
         efi = {
           canTouchEfiVariables = true;
