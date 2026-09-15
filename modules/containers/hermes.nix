@@ -1,4 +1,4 @@
-{ ... }:
+{ username, ... }:
 {
   flake.nixosModules.hermesContainer =
     {
@@ -27,6 +27,13 @@
       # Not a secret, so it stays here rather than in secrets.yaml; the password
       # and the session-signing secret next to it are sops-managed.
       dashboardUser = "isaac";
+
+      # The vault is one directory on the raid, reached over NFS as
+      # /mnt/${username}/Obsidian from every client. The container gets the same
+      # path it has everywhere else, so a note, skill or session transcript that
+      # references the vault resolves identically on the agent and on a desktop.
+      obsidianHostPath = "/mnt/raidDrive/${username}/Obsidian";
+      obsidianContainerPath = "/mnt/${username}/Obsidian";
 
       # Written by preStart, never by Nix: it holds the derived password hash,
       # so it must not reach the store. /run is tmpfs, root-owned, 0400.
@@ -217,8 +224,20 @@
 
       # 0700 because the .env under here holds every API key and chat token the
       # agent has; the data dir is the only place they exist on this host.
+      #
+      # The vault rules grant the image's uid the least that lets it work: `--x`
+      # on ${username}'s directory is traverse without the right to list it, so
+      # the agent reaches Obsidian and nothing else under there. The A+ line is
+      # the default ACL, which is what makes notes the agent creates inherit the
+      # grant; without it only the vault root would be writable. Neither rule
+      # recurses, so files that predate them need the one-off setfacl in
+      # docs/adr/0007.
       systemd.tmpfiles.rules = [
         "d ${dataDir} 0700 ${toString hermesUid} ${toString hermesGid} -"
+
+        "a+ /mnt/raidDrive/${username} - - - - u:${toString hermesUid}:--x"
+        "a+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
+        "A+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
       ];
 
       environment.etc."${dir}/compose.yaml".text = /* yaml */ ''
@@ -264,6 +283,12 @@
 
             volumes:
               - ${dataDir}:/opt/data
+
+              # Read-write on purpose: the agent is meant to write notes. It
+              # also runs shell tools, so it can rewrite or delete anything in
+              # the vault — the vault's protection against that is Syncthing
+              # history and backups, not this mount.
+              - ${obsidianHostPath}:${obsidianContainerPath}
 
             # Replaces the hypervisor-enforced ceiling the Hermes VM had. Compose
             # v2 applies these outside swarm. Browser tools want 2G+ on their
