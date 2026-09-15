@@ -4,7 +4,6 @@
   flake.nixosModules.minecraftContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -170,11 +169,7 @@
         };
       };
 
-      services.caddy.virtualHosts."http://mc.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString packwizPort}
-        '';
-      };
+      hostConfig.lanVhosts.services.mc.upstream = "127.0.0.1:${toString packwizPort}";
 
       services.caddy.virtualHosts."mc.monkeymeat.xyz" = {
         extraConfig = ''

@@ -4,7 +4,6 @@
     {
       pkgs,
       lib,
-      dnsName,
       config,
       ...
     }:
@@ -364,11 +363,7 @@
       # dashboard.public_url stays unset: basic auth needs no OAuth callback, and
       # setting it turns on a Host-header check that rejects this vhost unless
       # dashboard.trusted_proxies also lists the proxy.
-      services.caddy.virtualHosts."hermes.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString dashboardPort}
-        '';
-      };
+      hostConfig.lanVhosts.services.hermes.upstream = "127.0.0.1:${toString dashboardPort}";
 
     };
 

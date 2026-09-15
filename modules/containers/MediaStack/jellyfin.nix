@@ -4,7 +4,6 @@
   flake.nixosModules.jellyfinContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -49,9 +48,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."jellyfin.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:8096
-      '';
+      hostConfig.lanVhosts.services.jellyfin.upstream = "127.0.0.1:8096";
 
       networking.firewall = {
         allowedTCPPorts = [

@@ -3,7 +3,6 @@
   flake.nixosModules.litellmContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -82,11 +81,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."litellm.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString webUiPort}
-        '';
-      };
+      hostConfig.lanVhosts.services.litellm.upstream = "127.0.0.1:${toString webUiPort}";
 
       networking.firewall = {
         allowedTCPPorts = [ webUiPort ];

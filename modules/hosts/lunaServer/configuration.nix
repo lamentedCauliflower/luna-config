@@ -119,9 +119,7 @@
         firewall.trustedInterfaces = [ "br0" ];
       };
 
-      services.caddy.virtualHosts."homeassistant.luna.local".extraConfig = ''
-        reverse_proxy 192.168.0.10:8123
-      '';
+      hostConfig.lanVhosts.services.homeassistant.upstream = "192.168.0.10:8123";
 
       services.caddy.virtualHosts."homeassistant.monkeymeat.xyz".extraConfig = ''
         reverse_proxy 192.168.0.10:8123

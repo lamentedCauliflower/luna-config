@@ -4,7 +4,6 @@
   flake.nixosModules.giteaContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -87,11 +86,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."gitea.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString webUiPort}
-        '';
-      };
+      hostConfig.lanVhosts.services.gitea.upstream = "127.0.0.1:${toString webUiPort}";
 
       networking.firewall = {
         allowedTCPPorts = [

@@ -4,7 +4,6 @@
   flake.nixosModules.rommContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -104,9 +103,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."romm.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:7442
-      '';
+      hostConfig.lanVhosts.services.romm.upstream = "127.0.0.1:7442";
 
       networking.firewall = {
         allowedTCPPorts = [

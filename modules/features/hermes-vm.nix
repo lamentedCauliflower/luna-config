@@ -213,11 +213,7 @@
         after = [ "hermes-vm-storage.service" ];
       };
 
-      services.caddy.virtualHosts."hermes.luna.local" = {
-        extraConfig = ''
-          reverse_proxy ${vmAddress}:5678
-        '';
-      };
+      hostConfig.lanVhosts.services.hermes.upstream = "${vmAddress}:5678";
     };
 
 }

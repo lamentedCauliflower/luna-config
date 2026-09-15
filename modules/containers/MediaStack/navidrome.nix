@@ -4,7 +4,6 @@
   flake.nixosModules.navidromeContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -46,9 +45,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."navidrome.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:4533
-      '';
+      hostConfig.lanVhosts.services.navidrome.upstream = "127.0.0.1:4533";
 
       networking.firewall = {
         allowedTCPPorts = [

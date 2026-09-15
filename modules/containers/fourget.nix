@@ -4,7 +4,6 @@
   flake.nixosModules.fourgetContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -42,9 +41,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."4get.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:44480
-      '';
+      hostConfig.lanVhosts.services."4get".upstream = "127.0.0.1:44480";
 
       networking.firewall = {
         allowedTCPPorts = [

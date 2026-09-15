@@ -1,11 +1,11 @@
 {
+  self,
   username,
   ...
 }:
 {
   flake.nixosModules.syncthing =
     {
-      dnsName,
       ...
     }:
 
@@ -13,6 +13,12 @@
       webUiPort = 8384;
     in
     {
+      # cleoDesktop and yuroLaptop import this module but not nixosModules.caddy,
+      # so the lanVhosts options have to come in here rather than riding along
+      # with caddy. Caddy stays disabled on those hosts; the vhost this declares
+      # is inert there, exactly as it was before.
+      imports = [ self.nixosModules.lanVhosts ];
+
       users.users.syncthing.extraGroups = [ "users" ];
 
       services.syncthing = {
@@ -30,11 +36,7 @@
 
       networking.firewall.allowedTCPPorts = [ webUiPort ];
 
-      services.caddy.virtualHosts."syncthing.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:${toString webUiPort}
-        '';
-      };
+      hostConfig.lanVhosts.services.syncthing.upstream = "127.0.0.1:${toString webUiPort}";
 
     };
 }

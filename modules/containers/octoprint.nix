@@ -4,7 +4,6 @@
   flake.nixosModules.octoprintContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -44,9 +43,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."octoprint.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:8888
-      '';
+      hostConfig.lanVhosts.services.octoprint.upstream = "127.0.0.1:8888";
 
       networking.firewall = {
         allowedTCPPorts = [

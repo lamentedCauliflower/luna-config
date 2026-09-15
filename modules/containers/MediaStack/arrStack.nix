@@ -4,7 +4,6 @@
   flake.nixosModules.arrStackContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -181,38 +180,14 @@
         ];
       };
 
-      services.caddy.virtualHosts."sonarr.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:8989
-      '';
-
-      services.caddy.virtualHosts."radarr.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:7878
-      '';
-
-      services.caddy.virtualHosts."prowlarr.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:9696
-      '';
-
-      services.caddy.virtualHosts."transmission.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:9091
-      '';
-
-      services.caddy.virtualHosts."lidarr.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:8686
-        '';
-      };
-
-      services.caddy.virtualHosts."soulseek.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:5030
-        '';
-      };
-
-      services.caddy.virtualHosts."seer.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:5055
-        '';
+      hostConfig.lanVhosts.services = {
+        sonarr.upstream = "127.0.0.1:8989";
+        radarr.upstream = "127.0.0.1:7878";
+        prowlarr.upstream = "127.0.0.1:9696";
+        transmission.upstream = "127.0.0.1:9091";
+        lidarr.upstream = "127.0.0.1:8686";
+        soulseek.upstream = "127.0.0.1:5030";
+        seer.upstream = "127.0.0.1:5055";
       };
 
     };

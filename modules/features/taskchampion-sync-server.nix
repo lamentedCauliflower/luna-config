@@ -1,7 +1,7 @@
 { ... }:
 {
   flake.nixosModules.taskchampionSyncServer =
-    { pkgs, config, dnsName, ... }:
+    { pkgs, config, ... }:
     {
       networking.firewall.allowedTCPPorts = [ 8666 ];
 
@@ -17,10 +17,6 @@
         };
       };
 
-      services.caddy.virtualHosts."tasksync.${dnsName}.local" = {
-        extraConfig = ''
-          reverse_proxy 127.0.0.1:8666
-        '';
-      };
+      hostConfig.lanVhosts.services.tasksync.upstream = "127.0.0.1:8666";
     };
 }

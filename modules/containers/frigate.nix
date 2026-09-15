@@ -4,7 +4,6 @@
   flake.nixosModules.frigateContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -150,9 +149,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."frigate.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:5000
-      '';
+      hostConfig.lanVhosts.services.frigate.upstream = "127.0.0.1:5000";
 
       networking.firewall = {
         allowedTCPPorts = [

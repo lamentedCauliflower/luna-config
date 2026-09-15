@@ -4,7 +4,6 @@
   flake.nixosModules.piholeContainer =
     {
       pkgs,
-      dnsName,
       config,
       ...
     }:
@@ -102,9 +101,7 @@
         ];
       };
 
-      services.caddy.virtualHosts."pihole.${dnsName}.local".extraConfig = ''
-        reverse_proxy 127.0.0.1:5380
-      '';
+      hostConfig.lanVhosts.services.pihole.upstream = "127.0.0.1:5380";
 
       networking.firewall = {
         allowedTCPPorts = [
