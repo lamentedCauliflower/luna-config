@@ -154,8 +154,16 @@
             # unreachable through the port publish below — and a non-loopback
             # bind engages its auth gate, so without these keys the dashboard
             # refuses to start at all.
+            #
+            # format: raw because compose interpolates unquoted env_file values.
+            # A scrypt hash is `scrypt$N$r$p$salt$hash`, and `$salt` parses as a
+            # variable reference that expands to nothing — which corrupts the
+            # hash quietly: the provider still registers on a non-empty value,
+            # so the dashboard comes up and serves a login that rejects the
+            # correct password.
             env_file:
-              - ${config.sops.templates."hermes-dashboard.env".path}
+              - path: ${config.sops.templates."hermes-dashboard.env".path}
+                format: raw
 
             # Nothing is published to the LAN. Caddy fronts the dashboard on
             # ${toString dashboardPort}; the API servers are loopback-only because an
