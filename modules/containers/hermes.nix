@@ -24,6 +24,10 @@
       # multiply with the profile list below.
       dashboardPort = 9119;
 
+      # Not a secret, so it stays here rather than in secrets.yaml; the password
+      # hash and the session-signing secret next to it are sops-managed.
+      dashboardUser = "isaac";
+
       # Multi-profile: a profile is a supervised gateway (s6 slot) inside the one
       # container, not a container each. Upstream recommends the single-container
       # shape and warns that two gateway processes must never share a data dir.
@@ -45,8 +49,9 @@
       envFileOf = name: if name == "default" then "${dataDir}/.env" else "${dataDir}/profiles/${name}/.env";
 
       # Only these three keys are managed here. The rest of a profile's .env is
-      # the user's — API keys, chat-platform tokens, dashboard auth, written by
-      # `hermes setup` — and is never read, copied or rendered into the store.
+      # the user's — API keys and chat-platform tokens, written by `hermes
+      # setup` — and is never read, copied or rendered into the store. Dashboard
+      # auth used to live there too and is now declared above instead.
       syncEnvFn = ''
         sync_env() {
           file="$1"
@@ -96,6 +101,32 @@
 
       virtualisation.docker.enable = true;
 
+      # Dashboard auth is the one piece of Hermes' configuration declared here
+      # rather than left to the data dir's .env. ADR 0007 kept the .env out of
+      # sops because `hermes setup` writes it and Hermes rewrites it as chat
+      # platforms are linked; these three keys are set once by an admin and
+      # never rewritten, so that reason does not reach them.
+      #
+      # They arrive as container environment, not through sync_env below,
+      # because the dashboard is one backend for every profile while the
+      # API_SERVER_* keys differ per profile and so have to live in each
+      # profile's own .env. Upstream documents container environment as
+      # overriding the .env, naming secrets-manager integration as the case for
+      # it, so this is the supported direction and not a trick.
+      #
+      # _SECRET signs dashboard sessions: without a stable one, every restart of
+      # the container logs every dashboard session out.
+      sops.secrets.hermesDashboardPasswordHash = { };
+      sops.secrets.hermesDashboardAuthSecret = { };
+      sops.templates."hermes-dashboard.env" = {
+        content = ''
+          HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${dashboardUser}
+          HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH=${config.sops.placeholder.hermesDashboardPasswordHash}
+          HERMES_DASHBOARD_BASIC_AUTH_SECRET=${config.sops.placeholder.hermesDashboardAuthSecret}
+        '';
+        restartUnits = [ "hermes.service" ];
+      };
+
       # 0700 because the .env under here holds every API key and chat token the
       # agent has; the data dir is the only place they exist on this host.
       systemd.tmpfiles.rules = [
@@ -116,6 +147,15 @@
 
             environment:
               HERMES_DASHBOARD: "1"
+
+            # sops-rendered, so the values live on /run's tmpfs and never in the
+            # nix store. The dashboard defaults to binding 0.0.0.0 inside the
+            # container — which it must, since a container-loopback bind is
+            # unreachable through the port publish below — and a non-loopback
+            # bind engages its auth gate, so without these keys the dashboard
+            # refuses to start at all.
+            env_file:
+              - ${config.sops.templates."hermes-dashboard.env".path}
 
             # Nothing is published to the LAN. Caddy fronts the dashboard on
             # ${toString dashboardPort}; the API servers are loopback-only because an
@@ -190,8 +230,11 @@
 
       # Same hostname the Hermes VM answered on, now pointing at the dashboard
       # rather than the VM's own port. The dashboard supervises every profile, so
-      # put HERMES_DASHBOARD_BASIC_AUTH_USERNAME / _PASSWORD in the data dir's
-      # .env before anything but this host can reach it.
+      # the LAN reaches it only behind the basic auth declared above.
+      #
+      # dashboard.public_url stays unset: basic auth needs no OAuth callback, and
+      # setting it turns on a Host-header check that rejects this vhost unless
+      # dashboard.trusted_proxies also lists the proxy.
       services.caddy.virtualHosts."hermes.${dnsName}.local" = {
         extraConfig = ''
           reverse_proxy 127.0.0.1:${toString dashboardPort}
