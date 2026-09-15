@@ -25,8 +25,99 @@
       dashboardPort = 9119;
 
       # Not a secret, so it stays here rather than in secrets.yaml; the password
-      # hash and the session-signing secret next to it are sops-managed.
+      # and the session-signing secret next to it are sops-managed.
       dashboardUser = "isaac";
+
+      # Written by preStart, never by Nix: it holds the derived password hash,
+      # so it must not reach the store. /run is tmpfs, root-owned, 0400.
+      dashboardEnvFile = "/run/hermes/dashboard.env";
+
+      # Derives Hermes' scrypt hash from the sops-held plaintext at activation,
+      # so rotating the dashboard password is `sops set` plus a rebuild rather
+      # than a hand-run hash_password inside the image.
+      #
+      # The parameters are upstream's, checked against a hash the image itself
+      # produced: scrypt$N$r$p$<b64 salt>$<b64 dk>, n=16384 r=8 p=1, 16-byte
+      # salt, 32-byte output, no pepper. If upstream ever changes them the
+      # failure is a rejected login, not a corrupted file — recoverable by
+      # re-running hash_password and pinning the hash again.
+      dashboardEnvScript = pkgs.writeText "hermes-dashboard-env.py" /* python */ ''
+        import base64
+        import hashlib
+        import hmac
+        import os
+        import secrets
+        import sys
+
+        pw_file, secret_file, username, out_file = sys.argv[1:5]
+
+        N, R, P, DKLEN, SALT_LEN = 16384, 8, 1, 32, 16
+
+
+        def read(path):
+            with open(path, "rb") as fh:
+                data = fh.read()
+            return data[:-1] if data.endswith(b"\n") else data
+
+
+        password = read(pw_file)
+        session_secret = read(secret_file).decode()
+
+
+        def derive(salt, n, r, p, dklen):
+            return hashlib.scrypt(password, salt=salt, n=n, r=r, p=p, dklen=dklen)
+
+
+        def matches(encoded):
+            try:
+                tag, n, r, p, salt_b64, dk_b64 = encoded.split("$")
+                if tag != "scrypt":
+                    return False
+                want = base64.b64decode(dk_b64)
+                got = derive(base64.b64decode(salt_b64), int(n), int(r), int(p), len(want))
+            except Exception:
+                return False
+            return hmac.compare_digest(got, want)
+
+
+        # Reuse the hash already on disk when the password behind it has not
+        # changed. Rewriting it would change the env file on every rebuild, and
+        # compose recreates the container when its environment moves — which
+        # kills every running agent session for no reason.
+        existing = {}
+        if os.path.exists(out_file):
+            with open(out_file) as fh:
+                for line in fh:
+                    key, _, value = line.rstrip("\n").partition("=")
+                    existing[key] = value
+
+        current = existing.get("HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH", "")
+        if (
+            current
+            and existing.get("HERMES_DASHBOARD_BASIC_AUTH_USERNAME") == username
+            and existing.get("HERMES_DASHBOARD_BASIC_AUTH_SECRET") == session_secret
+            and matches(current)
+        ):
+            sys.exit(0)
+
+        salt = secrets.token_bytes(SALT_LEN)
+        encoded = "scrypt$%d$%d$%d$%s$%s" % (
+            N,
+            R,
+            P,
+            base64.b64encode(salt).decode(),
+            base64.b64encode(derive(salt, N, R, P, DKLEN)).decode(),
+        )
+
+        fd = os.open(out_file, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o400)
+        with os.fdopen(fd, "w") as fh:
+            fh.write(
+                "HERMES_DASHBOARD_BASIC_AUTH_USERNAME=" + username + "\n"
+                "HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH=" + encoded + "\n"
+                "HERMES_DASHBOARD_BASIC_AUTH_SECRET=" + session_secret + "\n"
+            )
+        os.chmod(out_file, 0o400)
+      '';
 
       # Multi-profile: a profile is a supervised gateway (s6 slot) inside the one
       # container, not a container each. Upstream recommends the single-container
@@ -104,8 +195,8 @@
       # Dashboard auth is the one piece of Hermes' configuration declared here
       # rather than left to the data dir's .env. ADR 0007 kept the .env out of
       # sops because `hermes setup` writes it and Hermes rewrites it as chat
-      # platforms are linked; these three keys are set once by an admin and
-      # never rewritten, so that reason does not reach them.
+      # platforms are linked; these keys are set by an admin and never
+      # rewritten, so that reason does not reach them.
       #
       # They arrive as container environment, not through sync_env below,
       # because the dashboard is one backend for every profile while the
@@ -114,18 +205,15 @@
       # overriding the .env, naming secrets-manager integration as the case for
       # it, so this is the supported direction and not a trick.
       #
+      # The plaintext is what is stored, and it never leaves sops or /run:
+      # preStart derives the hash Hermes actually wants, so the store never sees
+      # either form. Deriving at activation rather than in a derivation is the
+      # whole point — a build input would land world-readable in the store.
+      #
       # _SECRET signs dashboard sessions: without a stable one, every restart of
       # the container logs every dashboard session out.
-      sops.secrets.hermesDashboardPasswordHash = { };
-      sops.secrets.hermesDashboardAuthSecret = { };
-      sops.templates."hermes-dashboard.env" = {
-        content = ''
-          HERMES_DASHBOARD_BASIC_AUTH_USERNAME=${dashboardUser}
-          HERMES_DASHBOARD_BASIC_AUTH_PASSWORD_HASH=${config.sops.placeholder.hermesDashboardPasswordHash}
-          HERMES_DASHBOARD_BASIC_AUTH_SECRET=${config.sops.placeholder.hermesDashboardAuthSecret}
-        '';
-        restartUnits = [ "hermes.service" ];
-      };
+      sops.secrets.hermesDashboardPassword.restartUnits = [ "hermes.service" ];
+      sops.secrets.hermesDashboardAuthSecret.restartUnits = [ "hermes.service" ];
 
       # 0700 because the .env under here holds every API key and chat token the
       # agent has; the data dir is the only place they exist on this host.
@@ -162,7 +250,7 @@
             # so the dashboard comes up and serves a login that rejects the
             # correct password.
             env_file:
-              - path: ${config.sops.templates."hermes-dashboard.env".path}
+              - path: ${dashboardEnvFile}
                 format: raw
 
             # Nothing is published to the LAN. Caddy fronts the dashboard on
@@ -198,6 +286,14 @@
 
         preStart = ''
           set -eu
+
+          install -d -m 0700 -o root -g root "$(dirname ${dashboardEnvFile})"
+          ${pkgs.python3}/bin/python3 ${dashboardEnvScript} \
+            ${config.sops.secrets.hermesDashboardPassword.path} \
+            ${config.sops.secrets.hermesDashboardAuthSecret.path} \
+            ${dashboardUser} \
+            ${dashboardEnvFile}
+
           ${syncEnvFn}
           ${preStartSync}
         '';
