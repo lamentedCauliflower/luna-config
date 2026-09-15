@@ -224,19 +224,39 @@
       # 0700 because the .env under here holds every API key and chat token the
       # agent has; the data dir is the only place they exist on this host.
       #
-      # The vault rules grant the image's uid the least that lets it work: `--x`
-      # on ${username}'s directory is traverse without the right to list it, so
-      # the agent reaches Obsidian and nothing else under there. The A+ line is
-      # the default ACL, which is what makes notes the agent creates inherit the
-      # grant; without it only the vault root would be writable. Neither rule
-      # recurses, so files that predate them need the one-off setfacl in
-      # docs/adr/0007.
+      # The `--x` grant on ${username}'s directory is meant to be traverse
+      # without the right to list it, so the agent reaches Obsidian and nothing
+      # else under there. Be clear that it is inert as things actually stand:
+      # /mnt/raidDrive/${username} is mode 7777 root:root on lunaServer, so
+      # `other` already carries rwx and every user on the host can read and
+      # write it. The rule states intent; it does not currently enforce a
+      # boundary, and will not until that directory is tightened.
+      #
+      # The vault grants run in both directions and both halves are load-bearing.
+      # The image's uid needs rwx to write notes at all. ${username} needs it
+      # because notes the agent creates are owned by ${toString hermesUid}, and
+      # without an entry they arrive read-only on every desktop reaching the
+      # vault over NFS — uids cross that wire numerically. Today they happen to
+      # be editable only because the image runs with umask 0000, so everything it
+      # writes lands world-writable. That is luck, not design.
+      #
+      # `A+` is the default ACL, and it is the half that matters most: it is what
+      # makes entries created inside the vault inherit the grant. With only the
+      # `a+` access entry, the vault root is writable and nothing below it is, so
+      # a folder made from Obsidian is closed to the agent. Neither form
+      # recurses, so anything predating these rules needs the one-off setfacl in
+      # docs/adr/0007 — including its `-d` half, which is the default ACL and is
+      # easy to skip.
       systemd.tmpfiles.rules = [
         "d ${dataDir} 0700 ${toString hermesUid} ${toString hermesGid} -"
 
         "a+ /mnt/raidDrive/${username} - - - - u:${toString hermesUid}:--x"
+
         "a+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
         "A+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
+
+        "a+ ${obsidianHostPath} - - - - u:${username}:rwx"
+        "A+ ${obsidianHostPath} - - - - u:${username}:rwx"
       ];
 
       environment.etc."${dir}/compose.yaml".text = /* yaml */ ''
