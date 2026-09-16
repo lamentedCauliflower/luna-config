@@ -5,7 +5,7 @@ NixOS flake configuration for lunaServer and related host services.
 ## Language
 
 **Hermes Stack**:
-The docker compose stack on lunaServer that runs the Hermes Agent, from the upstream `nousresearch/hermes-agent` image. Exactly one container, holding every **Hermes Profile**; all mutable state is the single host directory bind-mounted at `/opt/data`.
+The docker compose stack on lunaServer that runs the Hermes Agent, from the upstream `nousresearch/hermes-agent` image. Exactly one container, holding every **Hermes Profile**; all mutable state is the single host directory bind-mounted at `/opt/data`. The Obsidian vault is bind-mounted on top of that at `/opt/data/Obsidian` and is a separate directory on the raid, not part of the data dir.
 _Avoid_: "the hermes container**s**" — the plural is the shape this deliberately does not have; also microvm, hernes-vm.
 
 **Hermes Profile**:

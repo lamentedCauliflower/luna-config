@@ -28,11 +28,24 @@
       dashboardUser = "isaac";
 
       # The vault is one directory on the raid, reached over NFS as
-      # /mnt/${username}/Obsidian from every client. The container gets the same
-      # path it has everywhere else, so a note, skill or session transcript that
-      # references the vault resolves identically on the agent and on a desktop.
+      # /mnt/${username}/Obsidian from every client.
+      #
+      # Inside the container it hangs off /opt/data instead, so it sits in the
+      # tree the agent already treats as its own — the same place its config,
+      # sessions, memories and skills live — rather than at an /mnt path that
+      # exists for no other reason. The cost is that the vault's path is no
+      # longer identical on the agent and on a desktop, so a note or skill that
+      # hardcodes an absolute path resolves on one and not the other; vault-
+      # relative references are unaffected.
+      #
+      # This nests one bind mount inside another. Docker orders mounts parent
+      # first, so ${dataDir} lands on /opt/data and the vault lands on top of
+      # /opt/data/Obsidian. The mountpoint itself is a real directory in
+      # ${dataDir} on the host, which is why tmpfiles creates it below — left to
+      # docker it would be created root-owned inside a tree that is otherwise
+      # entirely uid ${toString hermesUid}.
       obsidianHostPath = "/mnt/raidDrive/${username}/Obsidian";
-      obsidianContainerPath = "/mnt/${username}/Obsidian";
+      obsidianContainerPath = "/opt/data/Obsidian";
 
       # Written by preStart, never by Nix: it holds the derived password hash,
       # so it must not reach the store. /run is tmpfs, root-owned, 0400.
@@ -249,6 +262,11 @@
       # easy to skip.
       systemd.tmpfiles.rules = [
         "d ${dataDir} 0700 ${toString hermesUid} ${toString hermesGid} -"
+
+        # Mountpoint for the vault inside the data dir. Empty on the host — the
+        # bind mount only covers it in the container's namespace, so host-side
+        # backups of ${dataDir} still do not walk into the vault.
+        "d ${dataDir}/Obsidian 0700 ${toString hermesUid} ${toString hermesGid} -"
 
         "a+ /mnt/raidDrive/${username} - - - - u:${toString hermesUid}:--x"
 
