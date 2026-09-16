@@ -11,6 +11,7 @@
       self.homeModules.chromium
       self.homeModules.librewolf
       self.homeModules.jellyfin
+      self.homeModules.libreoffice
       self.homeModules.obsidian
       self.homeModules.stylix
       self.homeModules.voxtype
