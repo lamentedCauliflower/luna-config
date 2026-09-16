@@ -15,6 +15,18 @@
       mountPoint = "${config.home.homeDirectory}/mnt/navidrome";
       navidromeUrl = "http://navidrome.luna.local";
 
+      # A FUSE mount whose process is gone is worse than absent: every stat on
+      # the path returns ENOTCONN, so a plain `mkdir -p` fails and the unit
+      # restart-loops forever without ever reaching httpdirfs. Restarts can also
+      # stack mounts on the same directory, so pop until there is nothing left
+      # rather than unmounting once.
+      prepareMount = pkgs.writeShellScript "prepare-navidrome-mount" ''
+        for _ in $(seq 1 10); do
+          ${pkgs.fuse3}/bin/fusermount3 -uz ${mountPoint} >/dev/null 2>&1 || break
+        done
+        ${pkgs.coreutils}/bin/mkdir -p ${mountPoint}
+      '';
+
       # httpdirfs does not notify systemd, and the FUSE tree appears some
       # milliseconds after the process starts. Without this, an mpd that starts
       # in the same transaction can index an empty directory.
@@ -59,7 +71,7 @@
 
         Service = {
           Type = "simple";
-          ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p ${mountPoint}";
+          ExecStartPre = "${prepareMount}";
           # -f keeps httpdirfs in the foreground so systemd owns the process.
           #
           # Credentials arrive through --config, never argv: /proc/<pid>/cmdline
