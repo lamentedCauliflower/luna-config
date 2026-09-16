@@ -15,6 +15,37 @@
       mountPoint = "${config.home.homeDirectory}/mnt/navidrome";
       navidromeUrl = "http://navidrome.luna.local";
 
+      # nixpkgs pins 1.2.10, which cannot be used with --cache against a sonic
+      # server. fs_open's cache-creation retry path frees the Link's sonic id
+      # and then reads it back, so the retried Cache_exist looks for the cache
+      # under a garbage filename, fails, and the whole filesystem exits with
+      # "Cache file creation failure". mpd hits it within a file or two of
+      # starting a scan, which leaves a stale mountpoint behind and takes the
+      # library with it. Upstream fixed exactly this in 1.2.11 ("Resolved
+      # concurrent cache initialization race in fs_open"); 1.3.0 then fixed
+      # further use-after-frees in Cache_free and TOCTOU races in Cache_exist
+      # and Cache_delete, which are the same failure under a different name, so
+      # this pins the current release rather than the minimum one.
+      #
+      # Dropping --cache also avoids the crash and was rejected: the cache is
+      # what makes a scan finish at all (see docs/adr/0008).
+      #
+      # The test subdir is patched out because it pulls the Unity framework
+      # through a meson wrap, which cannot download in the build sandbox. The
+      # nixpkgs derivation runs no tests either way.
+      httpdirfs = pkgs.httpdirfs.overrideAttrs (old: {
+        version = "1.3.3";
+        src = pkgs.fetchFromGitHub {
+          owner = "fangfufu";
+          repo = "httpdirfs";
+          tag = "1.3.3";
+          hash = "sha256-HMcb23Rk7MD4qsdXXFaOqOenb87BDB1N1ov4wWPOq58=";
+        };
+        postPatch = (old.postPatch or "") + ''
+          substituteInPlace meson.build --replace-fail "subdir('tests')" ""
+        '';
+      });
+
       # A FUSE mount whose process is gone is worse than absent: every stat on
       # the path returns ENOTCONN, so a plain `mkdir -p` fails and the unit
       # restart-loops forever without ever reaching httpdirfs. Restarts can also
@@ -56,7 +87,7 @@
 
       # Not needed by the unit below (it calls the store path), but wanted at
       # the shell for --cache-clear when the cache goes stale.
-      home.packages = [ pkgs.httpdirfs ];
+      home.packages = [ httpdirfs ];
 
       systemd.user.services.navidrome-mount = {
         Unit = {
@@ -82,14 +113,15 @@
           # update is an HTTP range request, and without the permanent segment
           # cache a library scan is unusable rather than merely slow.
           ExecStart = lib.concatStringsSep " " [
-            (lib.getExe pkgs.httpdirfs)
+            (lib.getExe httpdirfs)
             "-f"
-            # Two words, not --config=PATH. httpdirfs 1.2.10 scans argv for
-            # the config path with a plain strcmp against "--config", so the
-            # = spelling leaves the path unread, silently falls back to
-            # $XDG_CONFIG_HOME/httpdirfs/config, and starts with no
-            # credentials at all — which is a successful mount of nothing
-            # rather than an error. The = form is only supported on git master.
+            # Two words. The = spelling only started working in 1.2.11; in
+            # 1.2.10 the argv scan is a plain strcmp against "--config", so
+            # --config=PATH left the path unread, fell back to
+            # $XDG_CONFIG_HOME/httpdirfs/config, found nothing and ran with no
+            # credentials at all — a successful mount of an empty tree rather
+            # than an error. The pin above is past that, but the two-word form
+            # works on every version and the = form does not.
             "--config /run/secrets/rendered/httpdirfs-navidrome.conf"
             "--cache"
             "--sonic-id3"
