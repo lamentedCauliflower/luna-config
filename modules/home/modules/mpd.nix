@@ -18,12 +18,21 @@
       # httpdirfs does not notify systemd, and the FUSE tree appears some
       # milliseconds after the process starts. Without this, an mpd that starts
       # in the same transaction can index an empty directory.
+      #
+      # Non-empty, not merely mounted: httpdirfs mounts successfully even when
+      # it never reached sonic mode, and hands back an empty tree. mpd reads
+      # that as "every file was deleted" and empties its tag cache, which is
+      # how this failed the first time. An empty library is never what is
+      # wanted here, so fail the unit instead of letting mpd see it.
       waitForMount = pkgs.writeShellScript "wait-for-navidrome-mount" ''
         for _ in $(seq 1 150); do
-          ${pkgs.util-linux}/bin/mountpoint -q ${mountPoint} && exit 0
+          if ${pkgs.util-linux}/bin/mountpoint -q ${mountPoint} \
+            && [ -n "$(${pkgs.coreutils}/bin/ls -A ${mountPoint})" ]; then
+            exit 0
+          fi
           sleep 0.2
         done
-        echo "${mountPoint} did not become a mountpoint" >&2
+        echo "${mountPoint} is not a mountpoint, or mounted but empty" >&2
         exit 1
       '';
     in
@@ -63,7 +72,13 @@
           ExecStart = lib.concatStringsSep " " [
             (lib.getExe pkgs.httpdirfs)
             "-f"
-            "--config=/run/secrets/rendered/httpdirfs-navidrome.conf"
+            # Two words, not --config=PATH. httpdirfs 1.2.10 scans argv for
+            # the config path with a plain strcmp against "--config", so the
+            # = spelling leaves the path unread, silently falls back to
+            # $XDG_CONFIG_HOME/httpdirfs/config, and starts with no
+            # credentials at all — which is a successful mount of nothing
+            # rather than an error. The = form is only supported on git master.
+            "--config /run/secrets/rendered/httpdirfs-navidrome.conf"
             "--cache"
             "--sonic-id3"
             navidromeUrl
