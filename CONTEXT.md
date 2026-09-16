@@ -89,6 +89,10 @@ _Avoid_: calling it a "remote desktop" (nothing is being mirrored — the sessio
 The framebuffer `kwin_wayland --virtual` renders into, fixed at 1920x1080 when the compositor starts. It is not a display: no DRM device, no CRTC, no EDID, nothing a monitor could ever show. Its geometry cannot change without restarting the compositor, and Sunshine's `output_name` is global, so there is exactly one per **Stream Session**.
 _Avoid_: "dummy plug", "fake monitor", "headless display" — all three imply a connector that this deliberately does not use.
 
+**Navidrome Mount**:
+The Navidrome library presented as an ordinary directory tree by httpdirfs, mounted per-user at `~/mnt/navidrome` by `navidrome-mount.service` and used as mpd's `music_directory`. It is a filesystem view of the Subsonic API, not a copy and not a sync — nothing is stored locally except httpdirfs' segment cache. See docs/adr/0008.
+_Avoid_: calling it a sync or a download; also "the NFS music share", which is the thing it replaced.
+
 ## Relationships
 
 - The **Hermes Stack** runs every **Hermes Profile** in one container; its dashboard on 9119 fronts all of them at once, and each profile's API server gets its own port.
@@ -114,6 +118,10 @@ _Avoid_: "dummy plug", "fake monitor", "headless display" — all three imply a 
 - mewoSteamdeck is the streaming client: `nixosModules.moonlight` installs Moonlight and surfaces it as a **Game Mode Tile**, so the **Stream Session** on cleoDesktop is reachable from Gaming Mode without entering **Desktop Mode**.
 - the **Stream Session** runs as `streamer`, never as isaac, because Steam is single-instance per user and would otherwise capture a `steam` launched at the desk.
 - `steamShortcuts` is bound to isaac, so the **Stream Session** has no **Non-Steam Shortcuts** and no **Proton Tiles**.
+- mpd on every desktop reads the **Navidrome Mount** rather than `/mnt/media/Music`; the NFS mount stays for games and emulators, not for music.
+- the **Navidrome Mount** reaches Navidrome by its LAN vhost, so it works from a laptop over tailscale — `100.64.0.0/10` is in `lanVhosts.allowedRanges` for exactly this kind of reason.
+- mpd playback through the **Navidrome Mount** does not move Navidrome's play counts or stars: streaming is not scrobbling, and nothing here calls `/rest/scrobble`.
+
 
 ## Example Dialogue
 
