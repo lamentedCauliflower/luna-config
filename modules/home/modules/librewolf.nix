@@ -31,6 +31,7 @@
         policies.ExtensionSettings = builtins.listToAttrs [
           (forceInstall ffAddons.dearrow)
           (forceInstall ffAddons.sponsorblock)
+          (forceInstall ffAddons.keepassxc-browser)
         ];
 
         settings = {

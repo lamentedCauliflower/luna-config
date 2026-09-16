@@ -42,6 +42,11 @@
             version = "2.0.2";
             hash = "sha256-yPZ+1wnoWsCxjubw3DHXgmrra76Li0HDXdyzMPgWsQA=";
           })
+          (chromiumExtension {
+            id = "oboonakemofpalcgghocfoadofidjkkk"; # KeePassXC-Browser
+            version = "1.10.3";
+            hash = "sha256-wmkAetiDDZmncortFv/92K8Fm/zLfise0qAasQ4CKSU=";
+          })
         ];
       };
 
