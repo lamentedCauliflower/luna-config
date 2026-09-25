@@ -44,7 +44,7 @@
       environment.etc."${dir}/compose.yaml".text = /* yaml */ ''
         name: Arr Stack
         services:
-          # transmission, prowlarr and slskd share this netns, so their outbound
+          # transmission, prowlarr, slskd and flaresolverr share this netns, so their outbound
           # traffic leaves via the Mullvad exit node. Their ports live here too.
           tailscale:
             image: tailscale/tailscale:latest
@@ -107,6 +107,12 @@
               - PGID=1000
             volumes:
               - /etc/${dir}/prowlarr:/config
+            restart: unless-stopped
+
+          # Shares prowlarr's netns: add it in prowlarr as http://localhost:8191.
+          flaresolverr:
+            image: ghcr.io/flaresolverr/flaresolverr:latest
+            network_mode: service:tailscale
             restart: unless-stopped
 
           sonarr:
