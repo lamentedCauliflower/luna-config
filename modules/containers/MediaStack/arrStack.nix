@@ -12,8 +12,9 @@
       torrent_dir = "/mnt/raidDrive/downloads/torrent";
       soulseek_dir = "/mnt/raidDrive/downloads/soulseek";
       media_dir = "/mnt/raidDrive/media";
-      # List with `tailscale exit-node list` once the node has Mullvad access.
-      exitNode = "nl-ams-wg-201.mullvad.ts.net";
+      # nl-ams-wg-201.mullvad.ts.net. IP, not hostname: containerboot's
+      # `tailscale up` can't resolve hostnames before the netmap exists.
+      exitNode = "100.123.199.85";
     in
     {
 
