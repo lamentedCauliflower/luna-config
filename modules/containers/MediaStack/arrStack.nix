@@ -49,17 +49,20 @@
           tailscale:
             image: tailscale/tailscale:latest
             hostname: luna-arr
-            # Reply to LAN clients via the docker gateway, not Mullvad, so
-            # direct ip:port access works. A /24 in main beats tailscale's table 52.
+            # Send LAN traffic via the docker gateway, not Mullvad, so direct
+            # ip:port access works. Tailscale's `lookup 52` rule sits at 5270,
+            # so this must be a rule at a lower priority, not a route in main.
             entrypoint:
               - sh
               - -c
-              - ip route replace 192.168.0.0/24 via $$(ip route | awk '/default/{print $$3}') && exec containerboot
+              - ip rule del to 192.168.0.0/24 lookup main priority 5000 2>/dev/null; ip rule add to 192.168.0.0/24 lookup main priority 5000 && exec containerboot
             env_file:
               - ${config.sops.templates."arrTailscale.env".path}
             environment:
               - TS_STATE_DIR=/var/lib/tailscale
               - TS_USERSPACE=false
+              # Image defaults to iptables-legacy; the host kernel only has nft tables.
+              - TS_DEBUG_FIREWALL_MODE=nftables
               - TS_EXTRA_ARGS=--exit-node=${exitNode} --exit-node-allow-lan-access
             volumes:
               - /etc/${dir}/tailscale:/var/lib/tailscale
