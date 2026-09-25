@@ -12,6 +12,8 @@
       torrent_dir = "/mnt/raidDrive/downloads/torrent";
       soulseek_dir = "/mnt/raidDrive/downloads/soulseek";
       media_dir = "/mnt/raidDrive/media";
+      # List with `tailscale exit-node list` once the node has Mullvad access.
+      exitNode = "nl-ams-wg-201.mullvad.ts.net";
     in
     {
 
@@ -31,11 +33,56 @@
         restartUnits = [ "arrStack.service" ];
       };
 
+      # Own tailnet node so only it rides Mullvad; the host stays an exit node itself.
+      sops.secrets.arrTailscaleAuthKey = { };
+      sops.templates."arrTailscale.env" = {
+        content = "TS_AUTHKEY=${config.sops.placeholder.arrTailscaleAuthKey}";
+        restartUnits = [ "arrStack.service" ];
+      };
+
       environment.etc."${dir}/compose.yaml".text = /* yaml */ ''
         name: Arr Stack
         services:
+          # transmission, prowlarr and slskd share this netns, so their outbound
+          # traffic leaves via the Mullvad exit node. Their ports live here too.
+          tailscale:
+            image: tailscale/tailscale:latest
+            hostname: luna-arr
+            # Reply to LAN clients via the docker gateway, not Mullvad, so
+            # direct ip:port access works. A /24 in main beats tailscale's table 52.
+            entrypoint:
+              - sh
+              - -c
+              - ip route replace 192.168.0.0/24 via $$(ip route | awk '/default/{print $$3}') && exec containerboot
+            env_file:
+              - ${config.sops.templates."arrTailscale.env".path}
+            environment:
+              - TS_STATE_DIR=/var/lib/tailscale
+              - TS_USERSPACE=false
+              - TS_EXTRA_ARGS=--exit-node=${exitNode} --exit-node-allow-lan-access
+            volumes:
+              - /etc/${dir}/tailscale:/var/lib/tailscale
+            devices:
+              - /dev/net/tun:/dev/net/tun
+            cap_add:
+              - NET_ADMIN
+              - NET_RAW
+            networks:
+              default:
+                aliases: [transmission, prowlarr, slskd]
+            ports:
+              - 9091:9091
+              - 51413:51413
+              - 51413:51413/udp
+              - 9696:9696
+              - 5030:5030
+              - 5031:5031
+              - 50300:50300
+            restart: unless-stopped
+
           transmission:
             image: lscr.io/linuxserver/transmission:latest
+            network_mode: service:tailscale
             env_file:
               - ${config.sops.templates."arrStack.env".path}
             environment:
@@ -44,14 +91,11 @@
             volumes:
               - /etc/${dir}/transmission:/config
               - ${torrent_dir}:/downloads
-            ports:
-              - 9091:9091
-              - 51413:51413
-              - 51413:51413/udp
             restart: unless-stopped
 
           prowlarr:
             image: lscr.io/linuxserver/prowlarr:nightly
+            network_mode: service:tailscale
             env_file:
               - ${config.sops.templates."arrStack.env".path}
             environment:
@@ -59,8 +103,6 @@
               - PGID=1000
             volumes:
               - /etc/${dir}/prowlarr:/config
-            ports:
-              - 9696:9696
             restart: unless-stopped
 
           sonarr:
@@ -114,12 +156,9 @@
           slskd:
               user: '1000:1000'
               image: slskd/slskd
+              network_mode: service:tailscale
               environment:
                 - SLSKD_REMOTE_CONFIGURATION=true
-              ports:
-                - 5030:5030
-                - 5031:5031
-                - 50300:50300
               volumes:
                 - /etc/${dir}/slskd/:/app
                 - ${soulseek_dir}:/app/downloads
