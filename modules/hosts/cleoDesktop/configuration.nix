@@ -70,10 +70,18 @@
         flakePath = "github:lamentedCauliflower/luna-config";
       };
 
-      home-manager.users.${username}.monitors = {
-        left = "HDMI-A-1";
-        middle = "desc:Dell Inc. DELL U2414H 292K46B105AL";
-        right = "desc:Dell Inc. DELL U2414H 9TG464CU50PL";
+      home-manager.users.${username} = {
+        monitors = {
+          left = "HDMI-A-1";
+          middle = "desc:AOC AG276QZD2 RK2RAJA006244";
+          right = "desc:Dell Inc. DELL U2414H 9TG464CU50PL";
+        };
+        monitorModes = {
+          left = "1920x1080@60";
+          middle = "2560x1440@280";
+          right = "1920x1080@60";
+        };
+        hdrMonitors = [ "middle" ];
       };
 
       nixpkgs.config = {

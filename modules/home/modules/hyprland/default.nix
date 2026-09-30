@@ -10,6 +10,12 @@
     let
       wallpaperPath = "${config.home.homeDirectory}/.config/hypr/wallpaper.png";
       monitors = config.monitors;
+      modes = config.monitorModes;
+      width = mode: lib.toInt (lib.head (lib.splitString "x" mode));
+      middleX = width modes.left;
+      rightX = middleX + width modes.middle;
+      # 10-bit + HDR flag; render:cm_auto_hdr (default on) switches to HDR for fullscreen HDR content.
+      hdr = name: lib.optionalString (lib.elem name config.hdrMonitors) ", bitdepth = 10, supports_hdr = 1";
 
       hyprlandLua = ''
         -- ── Variables ──
@@ -23,9 +29,9 @@
         end)
 
         -- ── Monitors ──
-        hl.monitor({ output = "${monitors.left}",   mode = "1920x1080@60", position = "0x0",    scale = 1 })
-        hl.monitor({ output = "${monitors.middle}", mode = "1920x1080@60", position = "1920x0", scale = 1 })
-        hl.monitor({ output = "${monitors.right}",  mode = "1920x1080@60", position = "3840x0", scale = 1 })
+        hl.monitor({ output = "${monitors.left}",   mode = "${modes.left}",   position = "0x0",                     scale = 1${hdr "left"} })
+        hl.monitor({ output = "${monitors.middle}", mode = "${modes.middle}", position = "${toString middleX}x0", scale = 1${hdr "middle"} })
+        hl.monitor({ output = "${monitors.right}",  mode = "${modes.right}",  position = "${toString rightX}x0",  scale = 1${hdr "right"} })
 
         -- ── General ──
         hl.config({
@@ -199,6 +205,22 @@
           right = "DP-3";
         };
         description = "Monitor mapping for Hyprland";
+      };
+
+      options.monitorModes = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = {
+          left = "1920x1080@60";
+          middle = "1920x1080@60";
+          right = "1920x1080@60";
+        };
+        description = "Per-monitor Hyprland mode; x positions are derived from the widths";
+      };
+
+      options.hdrMonitors = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = "Monitor keys (left/middle/right) driven at 10-bit with HDR enabled";
       };
 
       config = {
