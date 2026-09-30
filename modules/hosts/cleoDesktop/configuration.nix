@@ -78,7 +78,7 @@
         };
         monitorModes = {
           left = "1920x1080@60";
-          middle = "2560x1440@280";
+          middle = "2560x1440@240";
           right = "1920x1080@60";
         };
         hdrMonitors = [ "middle" ];
