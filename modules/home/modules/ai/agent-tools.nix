@@ -10,6 +10,7 @@
         # Commonly used agent tools
         bash
         zsh
+        tmux
         coreutils
         findutils
         gnugrep
