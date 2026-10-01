@@ -13,8 +13,8 @@
         settings = {
           global = {
             "security" = "user";
-            "guest account" = "nobody";
-            "map to guest" = "bad user";
+            # No guest mapping: Windows first tries its own account name, and a
+            # guest session there means no credential prompt (24H2 rejects it).
           };
           "userShare" = {
             "path" = "/export/${username}";
