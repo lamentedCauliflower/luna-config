@@ -11,9 +11,11 @@
       imports = [ self.nixosModules.chromium ];
 
       # System-side declarations for secrets consumed by isaac's home-manager
-      # modules (anki-client, taskwarrior, mpd) — the hm modules read the
-      # rendered /run/secrets paths directly.
+      # modules (anki-client, taskwarrior, mpd, pi-web-access) — the hm
+      # modules read the rendered /run/secrets paths directly.
       sops.secrets.ankiSyncKey.owner = username;
+      # Read by ~/.pi/agent/web-search.json via a `!cat` credential resolver.
+      sops.secrets.braveSearchAPIKey.owner = username;
       sops.secrets.taskwarriorSyncEncryptionSecret = { };
       sops.secrets.navidromePassword = { };
       sops.templates."task-sync.rc" = {
