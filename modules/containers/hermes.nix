@@ -12,11 +12,13 @@
       dataDir = "/var/lib/${dir}";
       composeFile = "/etc/${dir}/compose.yaml";
 
-      # The image drops to this fixed non-root uid and /opt/data is a host bind
-      # mount, so the host directory has to be owned by it or the gateway cannot
-      # write sessions, memories or skills.
-      hermesUid = 10000;
-      hermesGid = 10000;
+      # The image remaps its `hermes` user to HERMES_UID/HERMES_GID at boot
+      # (default 10000). It runs as ${username}:users instead, so everything the
+      # agent writes — data dir and vault alike — is ${username}'s own on the
+      # host and over NFS, with no ACLs to bridge two uids. The ids are looked up
+      # at start because they are not pinned in this flake.
+      hermesUser = username;
+      hermesGroup = config.users.users.${hermesUser}.group;
 
       # One dashboard backend fronts every profile at once — the Desktop/Web
       # client sends the target profile with each request, so this port does not
@@ -43,7 +45,7 @@
       # /opt/data/Obsidian. The mountpoint itself is a real directory in
       # ${dataDir} on the host, which is why tmpfiles creates it below — left to
       # docker it would be created root-owned inside a tree that is otherwise
-      # entirely uid ${toString hermesUid}.
+      # entirely ${hermesUser}'s.
       obsidianHostPath = "/mnt/raidDrive/${username}/Obsidian";
       obsidianContainerPath = "/opt/data/Obsidian";
 
@@ -166,14 +168,14 @@
         sync_env() {
           file="$1"
           port="$2"
-          install -d -m 0700 -o ${toString hermesUid} -g ${toString hermesGid} "$(dirname "$file")"
+          install -d -m 0700 -o ${hermesUser} -g ${hermesGroup} "$(dirname "$file")"
           touch "$file"
           for kv in API_SERVER_ENABLED=true API_SERVER_HOST=0.0.0.0 "API_SERVER_PORT=$port"; do
             grep -qxF "$kv" "$file" && continue
             sed -i "/^''${kv%%=*}=/d" "$file"
             printf '%s\n' "$kv" >> "$file"
           done
-          chown ${toString hermesUid}:${toString hermesGid} "$file"
+          chown ${hermesUser}:${hermesGroup} "$file"
           chmod 0600 "$file"
         }
       '';
@@ -237,44 +239,18 @@
       # 0700 because the .env under here holds every API key and chat token the
       # agent has; the data dir is the only place they exist on this host.
       #
-      # The `--x` grant on ${username}'s directory is meant to be traverse
-      # without the right to list it, so the agent reaches Obsidian and nothing
-      # else under there. Be clear that it is inert as things actually stand:
-      # /mnt/raidDrive/${username} is mode 7777 root:root on lunaServer, so
-      # `other` already carries rwx and every user on the host can read and
-      # write it. The rule states intent; it does not currently enforce a
-      # boundary, and will not until that directory is tightened.
-      #
-      # The vault grants run in both directions and both halves are load-bearing.
-      # The image's uid needs rwx to write notes at all. ${username} needs it
-      # because notes the agent creates are owned by ${toString hermesUid}, and
-      # without an entry they arrive read-only on every desktop reaching the
-      # vault over NFS — uids cross that wire numerically. Today they happen to
-      # be editable only because the image runs with umask 0000, so everything it
-      # writes lands world-writable. That is luck, not design.
-      #
-      # `A+` is the default ACL, and it is the half that matters most: it is what
-      # makes entries created inside the vault inherit the grant. With only the
-      # `a+` access entry, the vault root is writable and nothing below it is, so
-      # a folder made from Obsidian is closed to the agent. Neither form
-      # recurses, so anything predating these rules needs the one-off setfacl in
-      # docs/adr/0007 — including its `-d` half, which is the default ACL and is
-      # easy to skip.
+      # The vault needs no grant: the agent is ${hermesUser}, the vault's owner.
+      # Changing hermesUser does not re-own what is already on disk — stage2
+      # skips the data dir's subdirs once its top level matches, which tmpfiles
+      # has already made it — so a uid change needs a one-off `chown -R` of
+      # ${dataDir}, plus the vault files the old uid wrote.
       systemd.tmpfiles.rules = [
-        "d ${dataDir} 0700 ${toString hermesUid} ${toString hermesGid} -"
+        "d ${dataDir} 0700 ${hermesUser} ${hermesGroup} -"
 
         # Mountpoint for the vault inside the data dir. Empty on the host — the
         # bind mount only covers it in the container's namespace, so host-side
         # backups of ${dataDir} still do not walk into the vault.
-        "d ${dataDir}/Obsidian 0700 ${toString hermesUid} ${toString hermesGid} -"
-
-        "a+ /mnt/raidDrive/${username} - - - - u:${toString hermesUid}:--x"
-
-        "a+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
-        "A+ ${obsidianHostPath} - - - - u:${toString hermesUid}:rwx"
-
-        "a+ ${obsidianHostPath} - - - - u:${username}:rwx"
-        "A+ ${obsidianHostPath} - - - - u:${username}:rwx"
+        "d ${dataDir}/Obsidian 0700 ${hermesUser} ${hermesGroup} -"
       ];
 
       environment.etc."${dir}/compose.yaml".text = /* yaml */ ''
@@ -289,8 +265,12 @@
             # 64M default /dev/shm, taking every browser tool call with it.
             shm_size: 1gb
 
+            # HERMES_UID/HERMES_GID have no value here, so compose passes them
+            # through from the unit's script below.
             environment:
               HERMES_DASHBOARD: "1"
+              HERMES_UID:
+              HERMES_GID:
 
             # sops-rendered, so the values live on /run's tmpfs and never in the
             # nix store. The dashboard defaults to binding 0.0.0.0 inside the
@@ -361,7 +341,8 @@
         '';
 
         script = ''
-          docker compose -f ${composeFile} up --remove-orphans
+          HERMES_UID=$(id -u ${hermesUser}) HERMES_GID=$(id -g ${hermesUser}) \
+            docker compose -f ${composeFile} up --remove-orphans
         '';
 
         preStop = ''
