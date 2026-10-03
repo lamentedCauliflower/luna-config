@@ -5,13 +5,17 @@
     let
       # ponytail: pinned CRXs; bump version/hash when Chrome Web Store updates them.
       chromiumExtension =
-        { id, version, hash }:
+        {
+          id,
+          version,
+          hash,
+          url ? "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${pkgs.ungoogled-chromium.version}&acceptformat=crx3&x=id%3D${id}%26installsource%3Dondemand%26uc",
+        }:
         {
           inherit id version;
           crxPath = pkgs.fetchurl {
             name = "${id}.crx";
-            url = "https://clients2.google.com/service/update2/crx?response=redirect&prodversion=${pkgs.ungoogled-chromium.version}&acceptformat=crx3&x=id%3D${id}%26installsource%3Dondemand%26uc";
-            inherit hash;
+            inherit url hash;
           };
         };
     in
@@ -23,14 +27,17 @@
         package = pkgs.ungoogled-chromium;
         extensions = [
           (chromiumExtension {
-            id = "cjpalhdlnbpafiamejdnhcphjbkeiagm"; # uBlock Origin
-            version = "1.72.2";
-            hash = "sha256-bgLY5tzlae7HIbUx+cfShAPlQmRCQX1ahVoX3SiLVvg=";
+            # uBlock Origin (MV2) is gone from the Chrome Web Store; gorhill's
+            # GitHub CRX is signed with its own key, hence the different ID.
+            id = "fkgkibajhfbepljeaefdnfnegdcjomkh";
+            version = "1.75.0";
+            url = "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.chromium.crx";
+            hash = "sha256-1ojtPwJi7E+L3NTI9lmHxURMVgrrOHqeAqyh+s36cEY=";
           })
           (chromiumExtension {
             id = "enamippconapkdmgfgjchkhakpfinmaj"; # DeArrow
-            version = "2.3.9";
-            hash = "sha256-X501o/+rOGVkjkRbDCq0HU4g9kg8g+8bioPSHd+z4bc=";
+            version = "2.3.10";
+            hash = "sha256-TDLGuKJs6KdnwGkjrnwAFgPxSj/uAwBE6CHZPYaclYA=";
           })
           (chromiumExtension {
             id = "mnjggcdmjocbbbhaepdhchncahnbgone"; # SponsorBlock
@@ -44,8 +51,8 @@
           })
           (chromiumExtension {
             id = "oboonakemofpalcgghocfoadofidjkkk"; # KeePassXC-Browser
-            version = "1.10.3";
-            hash = "sha256-wmkAetiDDZmncortFv/92K8Fm/zLfise0qAasQ4CKSU=";
+            version = "1.10.4";
+            hash = "sha256-VueAiAgfIO058jvmBujYOPgr1Go8fJGHtNzBvXYcA7k=";
           })
         ];
       };
