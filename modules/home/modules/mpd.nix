@@ -13,7 +13,7 @@
       # every mpd client (rmpc, waybar) keeps working unchanged — see
       # docs/adr/0008 for why this rather than mopidy or upmpdcli.
       mountPoint = "${config.home.homeDirectory}/mnt/navidrome";
-      navidromeUrl = "http://navidrome.luna.local";
+      navidromeUrl = "https://navidrome.luna.monkeymeat.xyz";
 
       # nixpkgs pins 1.2.10, which cannot be used with --cache against a sonic
       # server. fs_open's cache-creation retry path frees the Link's sonic id

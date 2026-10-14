@@ -9,6 +9,8 @@
     }:
     let
       dir = "stacks/jellyfin";
+      lan = config.hostConfig.lanVhosts;
+      host = "jellyfin.${lan.httpsDomain}";
     in
     {
 
@@ -29,7 +31,7 @@
               - /mnt/raidDrive/media:/media
             restart: "unless-stopped"
             environment:
-              - JELLYFIN_PublishedServerUrl=http://jellyfin.luna.local
+              - JELLYFIN_PublishedServerUrl=https://${host}
 
       '';
 
@@ -48,7 +50,15 @@
         ];
       };
 
-      hostConfig.lanVhosts.services.jellyfin.upstream = "127.0.0.1:8096";
+      # Public on purpose, so not a lanVhost. Its Cloudflare record is DNS-only
+      # at the WAN IP and caddy gets the cert over the forwarded 80/443, like
+      # homeassistant.monkeymeat.xyz. Proxying it through Cloudflare would break
+      # TLS (the free edge cert covers one subdomain level, not jellyfin.luna)
+      # and Cloudflare's terms bar serving video through their proxy anyway.
+      services.caddy.virtualHosts = {
+        ${host}.extraConfig = "reverse_proxy 127.0.0.1:8096";
+        "http://jellyfin.${lan.domain}".extraConfig = "redir https://${host}{uri} 308";
+      };
 
       networking.firewall = {
         allowedTCPPorts = [

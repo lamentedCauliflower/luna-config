@@ -20,7 +20,7 @@ Each module file has two layers, do not confuse their argument sets:
 - Outer args: `self`, `inputs`, `username` (from `_module.args` in flake.nix).
 - Defining a module ≠ enabling it. Modules are turned on explicitly by being listed in a host's `imports` (see `modules/hosts/<host>/configuration.nix`).
 - Naming: files are kebab-case, but the `flake.nixosModules.<key>` / `flake.homeModules.<key>` keys are camelCase (e.g. `basic-utils.nix` → `basicUtils`). Match existing keys when referencing.
-- `dnsName` is a per-host `_module.args` value (`"luna"` on lunaServer). Services build Caddy vhosts as `<svc>.${dnsName}.local`.
+- `dnsName` is a per-host `_module.args` value (`"luna"` on lunaServer). LAN-only services declare Caddy vhosts through `hostConfig.lanVhosts.services` (`features/lan-vhosts.nix`, which applies the remote_ip gate): `http://<svc>.${dnsName}.local`, or with `https = true`, `<svc>.${dnsName}.monkeymeat.xyz` on one wildcard cert (Cloudflare DNS-01, `features/caddy.nix`), the `.local` name then only redirecting. Public vhosts (homeassistant, mc, jellyfin) are plain `services.caddy.virtualHosts` entries.
 
 ## Hosts
 

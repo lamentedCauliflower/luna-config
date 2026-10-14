@@ -32,22 +32,18 @@
         in
         {
           options.hostConfig.lanVhosts = {
-            scheme = lib.mkOption {
-              type = lib.types.enum [
-                "http"
-                "https"
-              ];
-              default = "http";
+            domain = lib.mkOption {
+              type = lib.types.str;
+              default = "${dnsName}.local";
               description = ''
-                Scheme every LAN vhost is served on.
+                Suffix every LAN vhost hangs off, always over plain http.
 
-                http is the honest default while these names end in `.local`. RFC
-                6762 reserves that suffix for mDNS, so no public CA will ever issue
+                RFC 6762 reserves `.local` for mDNS, so no public CA will ever issue
                 for it, and caddy's fallback is its own local CA, which no client
                 trusts without per-device installation. Serving https from an
                 untrusted CA trains everyone to click through certificate warnings
-                and buys nothing. Flip this to "https" in one place once `domain`
-                moves to a real zone and caddy can get real certificates.
+                and buys nothing, so a service that wants https sets `https` and
+                moves to `httpsDomain` instead.
 
                 The cost of http is that credentials cross the LAN in clear —
                 hermes' dashboard auth, the pihole admin password, gitea tokens.
@@ -56,10 +52,16 @@
               '';
             };
 
-            domain = lib.mkOption {
+            httpsDomain = lib.mkOption {
               type = lib.types.str;
-              default = "${dnsName}.local";
-              description = "Suffix every LAN vhost hangs off.";
+              default = "${dnsName}.monkeymeat.xyz";
+              description = ''
+                Real-zone suffix for services with `https` set. Their names get no
+                public DNS record — pihole answers them for the LAN and the
+                tailnet — so Let's Encrypt can't reach them for an HTTP challenge.
+                One wildcard cert, issued over Cloudflare DNS-01 by
+                nixosModules.caddy, covers them all.
+              '';
             };
 
             allowedRanges = lib.mkOption {
@@ -98,6 +100,11 @@
                         example = "127.0.0.1:8989";
                         description = "host:port caddy reverse-proxies to.";
                       };
+
+                      https = lib.mkEnableOption ''
+                        serving on `<subdomain>.<httpsDomain>` over https, leaving the
+                        `.local` name as nothing but a redirect to it
+                      '';
                     };
                   }
                 )
@@ -105,9 +112,12 @@
             };
           };
 
-          config.services.caddy.virtualHosts = lib.mapAttrs' (
+          config.services.caddy.virtualHosts = lib.concatMapAttrs (
             _: svc:
-            lib.nameValuePair "${cfg.scheme}://${svc.subdomain}.${cfg.domain}" {
+            let
+              local = "http://${svc.subdomain}.${cfg.domain}";
+              secure = "${svc.subdomain}.${cfg.httpsDomain}";
+
               # Two mutually exclusive `handle` blocks rather than a trailing bare
               # `respond`: caddy sorts directives by its own table, and handle/handle
               # states the precedence outright instead of depending on that order.
@@ -115,7 +125,7 @@
               # `remote_ip` reads the actual peer address. Do not add `forwarded` —
               # that switches it to X-Forwarded-For, which is attacker-controlled on
               # a request arriving from the WAN and would undo the whole gate.
-              extraConfig = ''
+              gated = ''
                 @lan remote_ip ${lib.concatStringsSep " " cfg.allowedRanges}
                 handle @lan {
                   reverse_proxy ${svc.upstream}
@@ -124,7 +134,20 @@
                   respond "Not available outside the LAN" 403
                 }
               '';
-            }
+            in
+            if svc.https then
+              {
+                ${secure} = {
+                  useACMEHost = cfg.httpsDomain;
+                  extraConfig = gated;
+                };
+                # 308, not 301: an API client still pointed at the old name (an
+                # arr app, a subsonic player) keeps its method and body across
+                # the hop instead of having a POST turned into a GET.
+                ${local}.extraConfig = "redir https://${secure}{uri} 308";
+              }
+            else
+              { ${local}.extraConfig = gated; }
           ) cfg.services;
         }
       )

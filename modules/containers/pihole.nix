@@ -78,10 +78,14 @@
             restart: unless-stopped
       '';
 
+      # luna.monkeymeat.xyz is answered here too: its LAN-only names have no
+      # public record at all, and jellyfin's public one would otherwise send LAN
+      # clients out to the WAN IP and back through the router.
       environment.etc."${dir}/dnsmasq.d/01-luna.local.conf" = {
         text = ''
           server=/luna.local/#
           address=/.luna.local/${piholeIp}
+          address=/.luna.monkeymeat.xyz/${piholeIp}
         '';
         mode = "444";
       };
@@ -98,6 +102,8 @@
         '';
         restartTriggers = [
           config.environment.etc."${dir}/compose.yaml".source
+          # FTL only reads dnsmasq.d at startup.
+          config.environment.etc."${dir}/dnsmasq.d/01-luna.local.conf".source
         ];
       };
 

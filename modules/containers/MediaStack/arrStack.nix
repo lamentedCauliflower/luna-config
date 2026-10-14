@@ -5,6 +5,7 @@
     {
       pkgs,
       config,
+      lib,
       ...
     }:
     let
@@ -229,15 +230,21 @@
         ];
       };
 
-      hostConfig.lanVhosts.services = {
-        sonarr.upstream = "127.0.0.1:8989";
-        radarr.upstream = "127.0.0.1:7878";
-        prowlarr.upstream = "127.0.0.1:9696";
-        transmission.upstream = "127.0.0.1:9091";
-        lidarr.upstream = "127.0.0.1:8686";
-        soulseek.upstream = "127.0.0.1:5030";
-        seer.upstream = "127.0.0.1:5055";
-      };
+      hostConfig.lanVhosts.services =
+        lib.mapAttrs
+          (_: upstream: {
+            inherit upstream;
+            https = true;
+          })
+          {
+            sonarr = "127.0.0.1:8989";
+            radarr = "127.0.0.1:7878";
+            prowlarr = "127.0.0.1:9696";
+            transmission = "127.0.0.1:9091";
+            lidarr = "127.0.0.1:8686";
+            soulseek = "127.0.0.1:5030";
+            seer = "127.0.0.1:5055";
+          };
 
     };
 
