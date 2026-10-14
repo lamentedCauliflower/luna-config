@@ -50,6 +50,7 @@ Uses `nh` (not raw `nixos-rebuild`). `NH_FLAKE` is set to `/mnt/raidDrive/isaac/
 - Validate flake: `nix flake check`
 - Apply on next boot: `nh os boot` / switch now: `nh os switch`
 - `nos-update` alias = `nh os boot --update` (also run by a systemd timer from the `bootUpdate` module).
+- Update inputs with `nix flake update`, then always `modules/home/modules/update-chromium-extensions.sh`: the Chrome Web Store only serves each extension's latest CRX, so any pin it hasn't refreshed fails on a fresh fetch.
 
 There is no lint/format/typecheck/CI. Verify changes by building the affected host before committing.
 

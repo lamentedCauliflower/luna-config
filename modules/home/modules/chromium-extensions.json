@@ -1,0 +1,22 @@
+{
+  "enamippconapkdmgfgjchkhakpfinmaj": {
+    "name": "DeArrow",
+    "version": "2.3.10",
+    "hash": "sha256-TDLGuKJs6KdnwGkjrnwAFgPxSj/uAwBE6CHZPYaclYA="
+  },
+  "mnjggcdmjocbbbhaepdhchncahnbgone": {
+    "name": "SponsorBlock",
+    "version": "6.1.6",
+    "hash": "sha256-VYf+K2qZRhAcoN3nxu/nanVcXuW21uY9/EjH9zbNtP8="
+  },
+  "gnfldmcodokkpcejgdlffnjakifemick": {
+    "name": "Imgur Unblocker",
+    "version": "2.0.2",
+    "hash": "sha256-yPZ+1wnoWsCxjubw3DHXgmrra76Li0HDXdyzMPgWsQA="
+  },
+  "oboonakemofpalcgghocfoadofidjkkk": {
+    "name": "KeePassXC-Browser",
+    "version": "1.10.4.1",
+    "hash": "sha256-rabNmvObnhSuu20w6sNltm6HBO8/3ORucbFf7CZGME4="
+  }
+}

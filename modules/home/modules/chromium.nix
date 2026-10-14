@@ -1,9 +1,8 @@
 { username, ... }:
 {
   flake.homeModules.chromium =
-    { pkgs, ... }:
+    { pkgs, lib, ... }:
     let
-      # ponytail: pinned CRXs; bump version/hash when Chrome Web Store updates them.
       chromiumExtension =
         {
           id,
@@ -34,27 +33,18 @@
             url = "https://github.com/gorhill/uBlock/releases/download/1.75.0/uBlock0_1.75.0.chromium.crx";
             hash = "sha256-1ojtPwJi7E+L3NTI9lmHxURMVgrrOHqeAqyh+s36cEY=";
           })
-          (chromiumExtension {
-            id = "enamippconapkdmgfgjchkhakpfinmaj"; # DeArrow
-            version = "2.3.10";
-            hash = "sha256-TDLGuKJs6KdnwGkjrnwAFgPxSj/uAwBE6CHZPYaclYA=";
-          })
-          (chromiumExtension {
-            id = "mnjggcdmjocbbbhaepdhchncahnbgone"; # SponsorBlock
-            version = "6.1.6";
-            hash = "sha256-VYf+K2qZRhAcoN3nxu/nanVcXuW21uY9/EjH9zbNtP8=";
-          })
-          (chromiumExtension {
-            id = "gnfldmcodokkpcejgdlffnjakifemick"; # Imgur Unblocker
-            version = "2.0.2";
-            hash = "sha256-yPZ+1wnoWsCxjubw3DHXgmrra76Li0HDXdyzMPgWsQA=";
-          })
-          (chromiumExtension {
-            id = "oboonakemofpalcgghocfoadofidjkkk"; # KeePassXC-Browser
-            version = "1.10.4";
-            hash = "sha256-VueAiAgfIO058jvmBujYOPgr1Go8fJGHtNzBvXYcA7k=";
-          })
-        ];
+        ]
+        # ponytail: the Chrome Web Store only serves each extension's latest CRX
+        # (old blob URLs go 400), so these pins fail any fresh fetch once upstream
+        # ships. update-chromium-extensions.sh re-pins them all and runs with
+        # every flake update; vendoring the CRXs is the fix if the gap ever bites.
+        ++ lib.mapAttrsToList (
+          id: ext:
+          chromiumExtension {
+            inherit id;
+            inherit (ext) version hash;
+          }
+        ) (lib.importJSON ./chromium-extensions.json);
       };
 
       xdg.mimeApps = {
