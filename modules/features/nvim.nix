@@ -21,6 +21,7 @@
             nix.enable = true;
             rust.enable = true;
             yaml.enable = true;
+            python.enable = true;
           };
 
           vim.autocomplete.nvim-cmp.enable = true;
