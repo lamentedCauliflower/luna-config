@@ -17,6 +17,30 @@
           nos-update = "nh os boot --update";
         };
 
+        # nix-shell and nix develop otherwise drop into bash.
+        interactiveShellInit = ''
+          ${pkgs.nix-your-shell}/bin/nix-your-shell zsh | source /dev/stdin
+        '';
+
+        # Name what a nix shell added, on the right. `nix shell` sets no marker
+        # and only prepends store paths to PATH, so diff against the outermost
+        # shell's PATH (agent/editor wrappers already carry store paths).
+        # Dev shells set IN_NIX_SHELL and pull in all of stdenv: label only.
+        promptInit = ''
+          export __ZSH_OUTER_PATH=''${__ZSH_OUTER_PATH-$PATH}
+          () {
+            local -a outer=(''${(s.:.)__ZSH_OUTER_PATH})
+            local -a added=(''${''${(M)path:#/nix/store/*}:|outer})
+            if [[ -n $IN_NIX_SHELL ]]; then
+              RPROMPT='[nix-shell]'
+            elif (( $#added )); then
+              # /nix/store/<hash>-jq-1.8.2-bin/bin -> jq
+              added=(''${(u)''${''${added#/nix/store/*-}%/bin}%%-[0-9]*})
+              RPROMPT="[nix: $added]"
+            fi
+          }
+        '';
+
         ohMyZsh = {
           enable = true;
           theme = "darkblood";
