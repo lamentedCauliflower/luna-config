@@ -32,5 +32,8 @@
 
     programs.home-manager.enable = true;
 
+    # Every host importing isaacHomeManager also imports nfsMount.
+    learnharness.dataDir = "/mnt/isaac/LearnHarness";
+
   };
 }
