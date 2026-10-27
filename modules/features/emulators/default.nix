@@ -9,7 +9,9 @@
     { ... }:
     {
       imports = [
-        self.nixosModules.ryujinxCanary
+        # Disabled: git.ryujinx.app unreachable and the pinned AppImage was
+        # GC'd, so the rebuild can't fetch src. Re-enable once it's back.
+        # self.nixosModules.ryujinxCanary
         self.nixosModules.nxOptimizer
         self.nixosModules.eden
       ];
