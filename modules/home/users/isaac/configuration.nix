@@ -18,6 +18,7 @@
       self.homeModules.threeDPrinting
 
       self.homeModules.ankiClient
+      self.homeModules.learnharness
       self.homeModules.taskwarrior
 
       self.homeModules.allAgents
