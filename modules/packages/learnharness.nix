@@ -8,10 +8,10 @@
       #   nix hash convert --hash-algo sha256 --to sri <printed-hash>
       # Not in nixpkgs; this wraps the upstream Linux x64 AppImage. The app's
       # own electron-updater can't replace a store path, so bump here.
-      version = "0.3.8";
+      version = "0.3.9";
       src = pkgs.fetchurl {
         url = "https://github.com/amosblomqvist/learnharness/releases/download/v${version}/LearnHarness-${version}-x86_64.AppImage";
-        hash = "sha256-g/mAHXJW/Uu2ZS+/AxpP/hunMlaljq+2tCLv7bQCCzA=";
+        hash = "sha256-mlSd5V/RojGh9m1ZLOCkCKattj8H1Tz7icnWbiZZ4IU=";
       };
 
       appimageContents = pkgs.appimageTools.extract {
