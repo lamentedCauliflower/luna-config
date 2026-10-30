@@ -194,6 +194,19 @@
               retries: 3
             restart: unless-stopped
 
+          # Same /downloads path as transmission so orphan/hardlink checks resolve.
+          cleanuparr:
+            image: ghcr.io/cleanuparr/cleanuparr:latest
+            environment:
+              - PUID=1000
+              - PGID=1000
+            volumes:
+              - /etc/${dir}/cleanuparr/:/config
+              - ${torrent_dir}:/downloads
+            ports:
+              - 11011:11011
+            restart: unless-stopped
+
       '';
 
       systemd.services.arrStack = {
@@ -223,6 +236,7 @@
           5031
           50300
           5055
+          11011
         ];
 
         allowedUDPPorts = [
@@ -244,6 +258,7 @@
             lidarr = "127.0.0.1:8686";
             soulseek = "127.0.0.1:5030";
             seer = "127.0.0.1:5055";
+            cleanuparr = "127.0.0.1:11011";
           };
 
     };
