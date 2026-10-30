@@ -185,7 +185,7 @@
             ports:
               - 5055:5055
             volumes:
-              - /etc/${dir}/slskd/:/app/config
+              - /etc/${dir}/seerr/:/app/config
             healthcheck:
               test: wget --no-verbose --tries=1 --spider http://localhost:5055/api/v1/settings/public || exit 1
               start_period: 20s
