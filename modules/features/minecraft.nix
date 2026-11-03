@@ -13,7 +13,9 @@
               zulu25
               zulu21
               zulu17
-              zulu8
+              # JDKs < 17 link gtk2 for Swing's GTK look-and-feel, and nixpkgs
+              # now refuses to evaluate gtk2. Minecraft never touches Swing.
+              (zulu8.override { gtkSupport = false; })
 
               graalvmPackages.graalvm-ce
             ];

@@ -96,9 +96,8 @@
           libxxf86vm
           libelf
 
-          # Required
+          # Required (gtk2 dropped: nixpkgs refuses to evaluate it, removal by 27.05)
           glib
-          gtk2
 
           # Inspired by steam
           # https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/st/steam/package.nix#L36-L85
@@ -160,7 +159,6 @@
           freeglut
           libjpeg
           libpng
-          libpng12
           libsamplerate
           libmikmod
           libtheora
