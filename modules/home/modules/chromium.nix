@@ -1,4 +1,4 @@
-{ username, ... }:
+{ self, username, ... }:
 {
   flake.homeModules.chromium =
     { pkgs, lib, ... }:
@@ -60,7 +60,19 @@
     };
 
   flake.nixosModules.chromium =
-    { config, ... }:
+    { config, lib, ... }:
+    let
+      # One bookmark per caddy route on lunaserver, so new services show up
+      # without a second list to keep in step. Redirect-only vhosts (the
+      # `.local` names of https lanVhosts) are skipped as duplicates.
+      routes = lib.filterAttrs (
+        _: vhost: !lib.hasPrefix "redir " vhost.extraConfig
+      ) self.nixosConfigurations.lunaserver.config.services.caddy.virtualHosts;
+      bookmark = host: {
+        name = lib.removePrefix "http://" host;
+        url = if lib.hasPrefix "http://" host then host else "https://${host}";
+      };
+    in
     {
       programs.chromium = {
         enable = true;
@@ -70,6 +82,10 @@
           DefaultSearchProviderName = "Google";
           DefaultSearchProviderKeyword = "google";
           BrowserThemeColor = config.home-manager.users.${username}.lib.stylix.colors.withHashtag.base00;
+          ManagedBookmarks = [
+            { toplevel_name = "Luna"; }
+          ]
+          ++ lib.sortOn (b: b.name) (map bookmark (lib.attrNames routes));
         };
       };
     };

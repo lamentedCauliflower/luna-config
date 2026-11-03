@@ -1,7 +1,12 @@
 { username, ... }:
 {
   flake.homeModules.librewolf =
-    { pkgs, inputs, ... }:
+    {
+      pkgs,
+      inputs,
+      osConfig,
+      ...
+    }:
     let
       ffAddons = inputs.nur.legacyPackages.${pkgs.stdenv.hostPlatform.system}.repos.rycee.firefox-addons;
 
@@ -33,6 +38,10 @@
           (forceInstall ffAddons.sponsorblock)
           (forceInstall ffAddons.keepassxc-browser)
         ];
+
+        # Same lunaserver route bookmarks as chromium; Firefox's policy takes
+        # chromium's ManagedBookmarks format verbatim.
+        policies.ManagedBookmarks = osConfig.programs.chromium.extraOpts.ManagedBookmarks;
 
         settings = {
           "webgl.disabled" = false;
