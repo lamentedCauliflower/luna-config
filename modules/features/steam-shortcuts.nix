@@ -21,10 +21,23 @@
         exec ${pkgs.jellyfin-media-player}/bin/jellyfin-desktop "$@"
       '';
 
+      # Fullscreen video in Gaming Mode freezes and flips between two stale
+      # frames for a few seconds every couple of minutes; windowed is fine.
+      # Fullscreen is exactly when gamescope stops compositing and scans
+      # Chromium's buffer out directly, so force composition while Chromium
+      # runs and hand scanout back on exit (the EXIT trap also fires on the
+      # SIGTERM Steam sends). Unverified on-device: if the flicker persists,
+      # scanout isn't the cause. Outside gamescope gamescopectl just fails.
+      chromiumGameModeExe = pkgs.writeShellScriptBin "chromium-gamemode" ''
+        ${pkgs.gamescope}/bin/gamescopectl composite_force 1
+        trap '${pkgs.gamescope}/bin/gamescopectl composite_force 0' EXIT
+        ${pkgs.ungoogled-chromium}/bin/chromium "$@"
+      '';
+
       # The three flags Chromium needs to open at all in Gaming Mode (see the
       # Chromium tile below for why each is required). Shared so the plain
       # browser tile and the YouTube kiosk tile can't drift apart.
-      chromium = "${pkgs.ungoogled-chromium}/bin/chromium";
+      chromium = "${chromiumGameModeExe}/bin/chromium-gamemode";
       chromiumGameMode = "--ozone-platform=x11 --password-store=basic --no-sandbox";
 
       # The writer consumes VDF-shaped objects ({ AppName, Exe, StartDir, icon,
