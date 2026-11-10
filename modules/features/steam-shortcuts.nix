@@ -35,8 +35,7 @@
       '';
 
       # The three flags Chromium needs to open at all in Gaming Mode (see the
-      # Chromium tile below for why each is required). Shared so the plain
-      # browser tile and the YouTube kiosk tile can't drift apart.
+      # Chromium tile below for why each is required).
       chromium = "${chromiumGameModeExe}/bin/chromium-gamemode";
       chromiumGameMode = "--ozone-platform=x11 --password-store=basic --no-sandbox";
 
@@ -155,13 +154,16 @@
             launchOptions = chromiumGameMode;
           };
           YouTube = {
-            # YouTube in Chromium kiosk (fullscreen, no browser UI). Shares the
-            # default Chromium profile, so it inherits uBlock Origin + SponsorBlock
-            # + DeArrow (ad-free, sponsor-skipping). Gaming Mode runs one app at a
-            # time, so sharing the profile with the Chromium tile can't clash.
-            exe = chromium;
-            icon = "${pkgs.ungoogled-chromium}/share/icons/hicolor/256x256/apps/chromium.png";
-            launchOptions = "${chromiumGameMode} --kiosk https://www.youtube.com/";
+            # YouTube in LibreWolf kiosk (fullscreen, no browser UI). Shares the
+            # default LibreWolf profile, so it inherits built-in uBlock Origin +
+            # the policy-installed SponsorBlock + DeArrow. Gaming Mode runs one
+            # app at a time, so sharing the profile with the LibreWolf tile
+            # can't clash.
+            exe = "${librewolf}/bin/librewolf";
+            icon = "${librewolf}/share/icons/hicolor/128x128/apps/librewolf.png";
+            launchOptions = "--kiosk https://www.youtube.com/";
+            # Same overlay deadlock as the LibreWolf tile below.
+            allowOverlay = false;
           };
           LibreWolf = {
             exe = "${librewolf}/bin/librewolf";
