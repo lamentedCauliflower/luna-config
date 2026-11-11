@@ -74,6 +74,7 @@ Managed by **sops-nix** (see `docs/adr/0002`). `secrets/secrets.yaml` is age-enc
 
 ## Conventions
 
+- Commit and push straight to `master`, never a branch: hosts auto-upgrade from `github:lamentedCauliflower/luna-config` master, so a branch never deploys.
 - One concern per module file; let `import-tree` pick it up rather than editing import lists.
 - `nixos-unstable`; `system.stateVersion = "25.11"`.
 - `flakePath` / deploy path is `/mnt/raidDrive/${username}/luna-config`.
