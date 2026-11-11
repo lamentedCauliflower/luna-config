@@ -52,6 +52,19 @@
       # a dynamically linked nixpkgs binary against.
       giteaMcp = "${pkgs.pkgsStatic.gitea-mcp-server}/bin/gitea-mcp";
 
+      # The image has no docker client either. pkgsStatic.docker-client does
+      # not build, and the stock bin/docker is a dynamic wrapper; with cgo off,
+      # libexec/docker/docker is the bare static CLI. The plugins go where the
+      # CLI looks by default.
+      dockerCli = "${
+        pkgs.docker-client.overrideAttrs (o: {
+          env = (o.env or { }) // {
+            CGO_ENABLED = "0";
+          };
+        })
+      }/libexec/docker/docker";
+      cliPlugins = "/usr/local/libexec/docker/cli-plugins";
+
       # Taken with the container down, before every start, so an unattended
       # `:latest` migration (docker-auto-update restarts this unit) always has a
       # pre-migration copy. Workspaces and project checkouts are excluded:
@@ -162,6 +175,12 @@
               PAPERCLIP_PUBLIC_URL: https://paperclip.${config.hostConfig.lanVhosts.httpsDomain}
               # caddy arrives through docker-proxy, i.e. from the gateway.
               TRUST_PROXY: ${gateway}
+              DOCKER_HOST: tcp://dind:2375
+              # nixpkgs' CLI looks for plugins only where this points.
+              DOCKER_CLI_PLUGIN_DIRS: ${cliPlugins}
+              # Ryuk mounts the daemon's socket; rootless keeps it here, not at
+              # /var/run/docker.sock.
+              TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /run/user/1000/docker.sock
 
             env_file:
               - path: ${config.sops.templates."paperclip.env".path}
@@ -175,6 +194,9 @@
               - ${gitconfig}:/etc/gitconfig:ro
               - ${giteaMcp}:/usr/local/bin/gitea-mcp:ro
               - ${config.sops.secrets.paperclipGiteaToken.path}:${giteaTokenPath}:ro
+              - ${dockerCli}:/usr/local/bin/docker:ro
+              - ${pkgs.pkgsStatic.docker-buildx}/libexec/docker/cli-plugins/docker-buildx:${cliPlugins}/docker-buildx:ro
+              - ${pkgs.pkgsStatic.docker-compose}/libexec/docker/cli-plugins/docker-compose:${cliPlugins}/docker-compose:ro
 
             # pids lives here, not as top-level pids_limit: compose rejects the
             # two together once deploy.resources.limits exists at all.
@@ -184,11 +206,54 @@
                   memory: 8G
                   cpus: "4.0"
                   pids: 2048
+
+          # Docker for the agents' tests. A daemon on this bridge rather than
+          # the host's socket (root on luna): test containers' traffic leaves
+          # through the same firewall chain as the agents', and their published
+          # ports answer at dind:<port>, which is what testcontainers expects.
+          #
+          # Rootless and not --privileged. The daemon runs as the image's uid
+          # 1000 inside its own user namespace, so root in a test container is
+          # a subuid, not root here. What it needs instead: namespace creation
+          # (seccomp), mounting its own /proc (systempaths), tun for its network
+          # and fuse for storage. Docker's default caps stay, since newuidmap
+          # carries SETUID/SETGID file caps that a cap_drop would refuse to exec.
+          #
+          # 2375 is plain tcp with no auth: it is published nowhere, so only
+          # this bridge (the agents, who are meant to have it) and the host
+          # reach it.
+          dind:
+            image: docker:dind-rootless
+            container_name: paperclip-dind
+            restart: unless-stopped
+            environment:
+              DOCKER_TLS_CERTDIR: ""
+            security_opt:
+              - seccomp=unconfined
+              - apparmor=unconfined
+              - systempaths=unconfined
+            devices:
+              - /dev/net/tun
+              - /dev/fuse
+            dns: [1.1.1.1, 8.8.8.8]
+            volumes:
+              - dind-data:/home/rootless/.local/share/docker
+            deploy:
+              resources:
+                limits:
+                  memory: 8G
+                  cpus: "4.0"
+                  pids: 4096
+
+        # Images and build cache only; nothing worth a snapshot.
+        volumes:
+          dind-data: {}
       '';
 
       # Egress sandbox: the internet stays open (model APIs, npm/pip, web), but
-      # nothing on this host, the LAN, other containers or the tailnet is
-      # reachable except Gitea's web port.
+      # nothing on this host, the LAN, other stacks' containers or the tailnet is
+      # reachable except Gitea's web port. Covers the dind sidecar and every
+      # test container it runs too: they all egress through this bridge.
       #
       # mangle PREROUTING because it is the one hook that sees the container's
       # packets after conntrack (so replies to caddy's proxied requests pass as
@@ -204,6 +269,9 @@
         iptables -t mangle -A paperclip-egress -m addrtype --dst-type LOCAL -j DROP
         iptables -t mangle -A paperclip-egress -m addrtype --dst-type BROADCAST -j DROP
         iptables -t mangle -A paperclip-egress -m addrtype --dst-type MULTICAST -j DROP
+        # Paperclip <-> dind, and test containers' published ports. The gateway
+        # is already handled above as a local address.
+        iptables -t mangle -A paperclip-egress -d ${subnet} -j RETURN
         for net in 10.0.0.0/8 172.16.0.0/12 192.168.0.0/16 100.64.0.0/10 169.254.0.0/16; do
           iptables -t mangle -A paperclip-egress -d "$net" -j DROP
         done
