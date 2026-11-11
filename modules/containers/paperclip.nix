@@ -3,7 +3,6 @@
   flake.nixosModules.paperclipContainer =
     {
       pkgs,
-      lib,
       config,
       ...
     }:
@@ -76,7 +75,10 @@
       '';
 
       # Static musl build: the image is Debian and has no /nix/store to resolve
-      # a dynamically linked nixpkgs binary against.
+      # a dynamically linked nixpkgs binary against. Agents get it through the
+      # `gitea` Tools connection (stdio template `luna.gitea-mcp`), which lives
+      # in Paperclip's database: runs get a fresh HOME, so `claude mcp add` in
+      # /paperclip never reaches them.
       giteaMcp = "${pkgs.pkgsStatic.gitea-mcp-server}/bin/gitea-mcp";
 
       # The image has no docker client either. pkgsStatic.docker-client does
@@ -98,20 +100,6 @@
       # they are bulky and their source of truth is Gitea.
       snapDir = "/mnt/raidDrive/paperclip-snapshots";
       keepSnapshots = 3;
-
-      # Each CLI keeps its own MCP config in HOME (/paperclip), which the CLIs
-      # rewrite themselves; going through their own `mcp add` avoids fighting
-      # them. Remove-then-add keeps it idempotent and picks up changed args.
-      registerMcp = ''
-        claude mcp remove -s user gitea >/dev/null 2>&1
-        claude mcp add -s user gitea \
-          --env GITEA_ACCESS_TOKEN_FILE=${giteaTokenPath} \
-          -- /usr/local/bin/gitea-mcp -t stdio -H ${giteaUrl}
-        codex mcp remove gitea >/dev/null 2>&1
-        codex mcp add gitea \
-          --env GITEA_ACCESS_TOKEN_FILE=${giteaTokenPath} \
-          -- /usr/local/bin/gitea-mcp -t stdio -H ${giteaUrl}
-      '';
     in
     {
       virtualisation.docker.enable = true;
@@ -225,6 +213,11 @@
               PAPERCLIP_API_URL: http://127.0.0.1:3100
               # caddy arrives through docker-proxy, i.e. from the gateway.
               TRUST_PROXY: ${gateway}
+              # The rest reach `docker exec` shells only: agent runs inherit an
+              # allowlist of the server's env (PATH, HOME, locale, provider
+              # keys). Runs get these, plus PATH/NPM_CONFIG_PREFIX/PYTHONUSERBASE
+              # for /paperclip/agent-tools, from the "local" environment's env
+              # vars in Paperclip's database. Change a value there too.
               DOCKER_HOST: tcp://dind:2375
               # nixpkgs' CLI looks for plugins only where this points.
               DOCKER_CLI_PLUGIN_DIRS: ${cliPlugins}
@@ -348,7 +341,6 @@
           docker
           gnutar
           gzip
-          curl
         ];
         unitConfig.RequiresMountsFor = snapDir;
 
@@ -369,19 +361,6 @@
 
         preStop = ''
           docker compose -f ${composeFile} down
-        '';
-
-        # Waits for the server rather than the container: the entrypoint remaps
-        # node's uid first, and an exec that beats it would write the CLIs'
-        # config as uid 1000. Failure only costs the gitea MCP, so it never
-        # fails the unit.
-        postStart = ''
-          for _ in $(seq 150); do
-            curl -so /dev/null http://127.0.0.1:${toString port}/ && break
-            sleep 2
-          done
-          docker exec -u node paperclip sh -c ${lib.escapeShellArg registerMcp} \
-            || echo "paperclip: gitea MCP registration failed" >&2
         '';
 
         serviceConfig = {
