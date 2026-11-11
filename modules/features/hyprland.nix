@@ -10,6 +10,11 @@
       programs.hyprland = {
         enable = true;
         xwayland.enable = true;
+        # Matches nixpkgs' default hyprland build (withUwsm = true), so it is
+        # substituted from cache.nixos.org. false makes the module override the
+        # package with UWSM off and recompile Hyprland (~6.5 min) every bump.
+        # Also adds a "Hyprland (UWSM)" session to ly; plain Hyprland is unchanged.
+        withUWSM = true;
         portalPackage = pkgs.xdg-desktop-portal-hyprland;
       };
       environment.sessionVariables.NIXOS_OZONE_WL = "1";

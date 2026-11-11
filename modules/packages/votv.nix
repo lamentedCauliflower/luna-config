@@ -3,7 +3,7 @@
   perSystem =
     { pkgs, ... }:
     let
-      # --- pin (bump version + hash together) ------------------------------
+      # --- pin (bump version + hash + outputHash together) -----------------
       # Pin source: https://archive.votv.dev/manifest.json — the official
       # build archive publishes every build's sha256, so no prefetch needed:
       # pick a "stable"-channel build, copy its version and sha256 (hex →
@@ -22,11 +22,17 @@
         url = "https://r2.votv.dev/archive/votv/${archiveName}";
         hash = "sha256-S4Daywkm0h1mUMaELhd4XD2dvqreXioxWTRsObuiB5k=";
       };
+      # Hash of the extracted game tree. Fixed-output, so the store path depends
+      # only on name + this hash: nixpkgs bumps no longer re-extract ~8GB (and
+      # keep one copy per generation), and the activation rsync stays a no-op.
+      # On a version bump set it to pkgs.lib.fakeHash, build, paste the "got:".
+      outputHash = "sha256-ZSLL99VkECHYlJUXp7XR9eobs7G9kiZy/TEcJW3gCPM=";
     in
     {
       packages.votv = pkgs.stdenvNoCC.mkDerivation {
         pname = "votv";
-        inherit version src;
+        inherit version src outputHash;
+        outputHashMode = "recursive";
 
         nativeBuildInputs = [
           pkgs.p7zip

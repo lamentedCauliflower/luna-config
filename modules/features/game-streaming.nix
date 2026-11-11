@@ -308,6 +308,16 @@
         };
       };
 
+      # The CUDA sunshine above is unfree, so cache.nixos.org never has it. The
+      # NixOS CUDA team's cache carries this exact derivation plus the CUDA
+      # toolchain it pulls in. Key from https://wiki.nixos.org/wiki/CUDA.
+      nix.settings = {
+        extra-substituters = [ "https://cache.nixos-cuda.org" ];
+        extra-trusted-public-keys = [
+          "cache.nixos-cuda.org:74DUi4Ye579gUqzH4ziL9IyiJBlDpMRn9MBN8oNan9M="
+        ];
+      };
+
       systemd.user.services.sunshine = {
         # The stock unit is wantedBy graphical-session.target, which a Hyprland
         # login also reaches — without this, logging in at the desk would start

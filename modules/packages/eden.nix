@@ -3,7 +3,7 @@
   perSystem =
     { pkgs, ... }:
     let
-      # --- pin (bump version + hash together) ------------------------------
+      # --- pin (bump version + hash + edenAppDir outputHash together) -------
       #   nix-prefetch-url <url>
       #   nix hash convert --hash-algo sha256 --to sri <printed-hash>
       # amd64-clang-pgo = generic modern x86_64, PGO-optimised; runs on both the
@@ -18,13 +18,15 @@
       # squashfs, so appimageTools can't extract it ("no valid SQUASHFS
       # superblock"). Extract the DwarFS image with dwarfsextract (offset
       # auto-detected, so it survives version bumps), then FHS-wrap the AppDir.
-      # dwarfs bundles an old fbthrift/folly copy that doesn't build against
-      # nixpkgs' current fmt (12.x dropped APIs it relies on); fmt_10 matches
-      # what it was written against.
-      dwarfs = pkgs.dwarfs.override { fmt = pkgs.fmt_10; };
-
+      # Fixed-output (outputHash = the extracted tree), so the path depends only
+      # on name + hash: nixpkgs bumps reuse it and dwarfs is only needed when
+      # the Eden version changes. On a bump set outputHash = pkgs.lib.fakeHash,
+      # build, paste the "got:". Stock dwarfs is in cache.nixos.org (the old
+      # fmt_10 override forced a full C++ build).
       edenAppDir = pkgs.runCommand "eden-${version}-appdir" {
-        nativeBuildInputs = [ dwarfs ];
+        nativeBuildInputs = [ pkgs.dwarfs ];
+        outputHashMode = "recursive";
+        outputHash = "sha256-fYhev53XQGTid+jmbk1151kkty7Ra8rdiGXoW+XNUS0=";
       } ''
         mkdir -p $out
         dwarfsextract --input=${src} --image-offset=auto --output=$out
