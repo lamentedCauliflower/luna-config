@@ -228,6 +228,11 @@
             restart: unless-stopped
             environment:
               DOCKER_TLS_CERTDIR: ""
+              # Without its own pid namespace, rootlesskit inherits every
+              # orphaned containerd-shim and never reaps it: one zombie per test
+              # container run, until pids runs out. As that namespace's init it
+              # reaps them.
+              DOCKERD_ROOTLESS_ROOTLESSKIT_FLAGS: --pidns
             security_opt:
               - seccomp=unconfined
               - apparmor=unconfined
