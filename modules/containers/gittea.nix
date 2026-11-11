@@ -44,6 +44,14 @@
               - GITEA__database__USER=gitea
               # Clone URLs and links; env-to-ini writes it into app.ini on start.
               - GITEA__server__ROOT_URL=https://gitea.luna.monkeymeat.xyz/
+              # Webhooks refuse private targets by default. Paperclip is the one
+              # LAN exception (issue/PR events -> routines); `external` keeps
+              # every existing internet webhook working.
+              - GITEA__webhook__ALLOWED_HOST_LIST=external,paperclip.luna.monkeymeat.xyz
+            # The LAN names have no public record and this container resolves
+            # through public DNS, so point Paperclip's at caddy on the host.
+            extra_hosts:
+              - "paperclip.luna.monkeymeat.xyz:host-gateway"
             restart: always
             networks:
               - gitea
