@@ -122,12 +122,28 @@
             container_name: paperclip
             restart: unless-stopped
             stop_grace_period: 90s
-            pids_limit: 2048
 
             # The entrypoint starts as root, remaps the node user to
             # USER_UID/USER_GID, chowns /paperclip on mismatch and gosu-drops.
             # These are exactly what that needs; KILL lets tini (root) signal
             # the node-owned server so embedded Postgres shuts down cleanly.
+            #
+            # The image's /app is owned by uid 1000 and the entrypoint only
+            # re-owns /paperclip, yet embedded Postgres creates its lib
+            # symlinks under /app at every start: with USER_UID remapped it
+            # dies on EACCES. Re-owning just those directories (not files, so
+            # overlayfs copies up no data) fixes it; `;` not `&&` so a moved
+            # path upstream surfaces as that same EACCES rather than a silent
+            # no-start. Overriding entrypoint drops the image CMD, hence command.
+            entrypoint:
+              - /usr/bin/tini
+              - -s
+              - --
+              - sh
+              - -c
+              - find -L /app/node_modules/.pnpm/embedded-postgres@*/node_modules/@embedded-postgres -type d -exec chown "$$USER_UID:$$USER_GID" {} +; exec docker-entrypoint.sh "$$@"
+              - sh
+            command: [node, server/dist-runtime/index.mjs]
             cap_drop: [ALL]
             cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETUID, SETGID, KILL]
             security_opt: ["no-new-privileges:true"]
@@ -160,11 +176,14 @@
               - ${giteaMcp}:/usr/local/bin/gitea-mcp:ro
               - ${config.sops.secrets.paperclipGiteaToken.path}:${giteaTokenPath}:ro
 
+            # pids lives here, not as top-level pids_limit: compose rejects the
+            # two together once deploy.resources.limits exists at all.
             deploy:
               resources:
                 limits:
                   memory: 8G
                   cpus: "4.0"
+                  pids: 2048
       '';
 
       # Egress sandbox: the internet stays open (model APIs, npm/pip, web), but
