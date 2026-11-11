@@ -45,10 +45,7 @@
         ];
       };
 
-      hostConfig.lanVhosts.services.navidrome = {
-        upstream = "127.0.0.1:4533";
-        https = true;
-      };
+      hostConfig.lanVhosts.services.navidrome.upstream = "127.0.0.1:4533";
 
       networking.firewall = {
         allowedTCPPorts = [

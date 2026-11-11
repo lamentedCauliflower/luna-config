@@ -96,9 +96,9 @@ _Avoid_: calling it a sync or a download; also "the NFS music share", which is t
 ## Relationships
 
 - The **Hermes Stack** runs every **Hermes Profile** in one container; its dashboard on 9119 fronts all of them at once, and each profile's API server gets its own port.
-- lunaServer reverse-proxies `hermes.luna.local` to the **Hermes Stack**'s dashboard. Every published port binds `127.0.0.1`, so caddy is the only way in and an API server with no `API_SERVER_KEY` is not LAN-reachable.
+- lunaServer reverse-proxies `hermes.luna.monkeymeat.xyz` to the **Hermes Stack**'s dashboard. Every published port binds `127.0.0.1`, so caddy is the only way in and an API server with no `API_SERVER_KEY` is not LAN-reachable.
 - The **Hermes Stack**'s API keys live in its data dir's `.env`, not in `secrets/secrets.yaml` — the one service credential on lunaServer that is not a **Secret** in the sops sense (docs/adr/0007).
-- `nixosModules.hermesVm` and `nixosModules.hermesContainer` are mutually exclusive: both declare the `hermes.luna.local` caddy vhost, so importing both is an eval conflict rather than a silently wrong backend.
+- `nixosModules.hermesVm` and `nixosModules.hermesContainer` are mutually exclusive: both declare the `hermes` lanVhost, so importing both is an eval conflict rather than a silently wrong backend.
 - mewoSteamdeck boots into **Gaming Mode**; **Desktop Mode** is only reachable from inside it.
 - chromium and librewolf are each surfaced as a **Non-Steam Shortcut** on every Steam host (mewoSteamdeck, cleoDesktop, yuroLaptop).
 - each installed emulator surfaces its own **Game Mode Tile**; a host without the emulator gets no tile.

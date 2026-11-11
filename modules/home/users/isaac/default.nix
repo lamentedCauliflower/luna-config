@@ -21,7 +21,7 @@
       sops.templates."task-sync.rc" = {
         owner = username;
         content = ''
-          sync.server.url=http://tasksync.luna.local
+          sync.server.url=https://tasksync.luna.monkeymeat.xyz
           sync.server.client_id=${username}
           sync.server.encryption_secret=${config.sops.placeholder.taskwarriorSyncEncryptionSecret}
         '';

@@ -42,6 +42,8 @@
               - GITEA__database__HOST=gitea-db:5432
               - GITEA__database__NAME=gitea
               - GITEA__database__USER=gitea
+              # Clone URLs and links; env-to-ini writes it into app.ini on start.
+              - GITEA__server__ROOT_URL=https://gitea.luna.monkeymeat.xyz/
             restart: always
             networks:
               - gitea

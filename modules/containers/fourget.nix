@@ -20,8 +20,8 @@
             image: luuul/4get:latest
             restart: unless-stopped
             environment:
-              - FOURGET_PROTO=http
-              - FOURGET_SERVER_NAME=4get.luna.local
+              - FOURGET_PROTO=https
+              - FOURGET_SERVER_NAME=4get.luna.monkeymeat.xyz
             ports:
               - "44480:80"
       '';

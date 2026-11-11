@@ -245,11 +245,7 @@
       };
 
       hostConfig.lanVhosts.services =
-        lib.mapAttrs
-          (_: upstream: {
-            inherit upstream;
-            https = true;
-          })
+        lib.mapAttrs (_: upstream: { inherit upstream; })
           {
             sonarr = "127.0.0.1:8989";
             radarr = "127.0.0.1:7878";

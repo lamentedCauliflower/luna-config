@@ -64,7 +64,7 @@
     let
       # One bookmark per caddy route on lunaserver, so new services show up
       # without a second list to keep in step. Redirect-only vhosts (the
-      # `.local` names of https lanVhosts) are skipped as duplicates.
+      # legacy `.local` names of lanVhosts) are skipped as duplicates.
       routes = lib.filterAttrs (
         _: vhost: !lib.hasPrefix "redir " vhost.extraConfig
       ) self.nixosConfigurations.lunaserver.config.services.caddy.virtualHosts;

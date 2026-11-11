@@ -20,7 +20,7 @@ Each module file has two layers, do not confuse their argument sets:
 - Outer args: `self`, `inputs`, `username` (from `_module.args` in flake.nix).
 - Defining a module ≠ enabling it. Modules are turned on explicitly by being listed in a host's `imports` (see `modules/hosts/<host>/configuration.nix`).
 - Naming: files are kebab-case, but the `flake.nixosModules.<key>` / `flake.homeModules.<key>` keys are camelCase (e.g. `basic-utils.nix` → `basicUtils`). Match existing keys when referencing.
-- `dnsName` is a per-host `_module.args` value (`"luna"` on lunaServer). LAN-only services declare Caddy vhosts through `hostConfig.lanVhosts.services` (`features/lan-vhosts.nix`, which applies the remote_ip gate): `http://<svc>.${dnsName}.local`, or with `https = true`, `<svc>.${dnsName}.monkeymeat.xyz` on one wildcard cert (Cloudflare DNS-01, `features/caddy.nix`), the `.local` name then only redirecting. Public vhosts (homeassistant, mc, jellyfin) are plain `services.caddy.virtualHosts` entries.
+- `dnsName` is a per-host `_module.args` value (`"luna"` on lunaServer). LAN-only services declare Caddy vhosts through `hostConfig.lanVhosts.services` (`features/lan-vhosts.nix`, which applies the remote_ip gate): `<svc>.${dnsName}.monkeymeat.xyz` on one wildcard cert (Cloudflare DNS-01, `features/caddy.nix`), with the legacy `http://<svc>.${dnsName}.local` name only redirecting. Public vhosts (homeassistant, mc, jellyfin) are plain `services.caddy.virtualHosts` entries.
 
 ## Hosts
 
@@ -58,9 +58,9 @@ There is no lint/format/typecheck/CI. Verify changes by building the affected ho
 
 Hermes Agent runs as a docker compose stack from the upstream `nousresearch/hermes-agent` image (`modules/containers/hermes.nix`, `hermesContainer`, reached through `dockerFullStack`). **One container**: each **Hermes Profile** is a supervised gateway (s6 slot) inside it, never a container each — two gateway processes on one data dir corrupt sessions and memories. Profiles are declared in the module's `profiles` attrset, which drives published ports and each profile's `API_SERVER_*` keys; `hermes profile create` itself runs at start because s6 slots only exist at runtime.
 
-State is `/var/lib/stacks/hermes` (isaac:users via `HERMES_UID`/`HERMES_GID`, 0700), including the `.env` holding every API key — deliberately **not** sops, see ADR 0007. Ports publish to `127.0.0.1` only; caddy fronts the dashboard (9119) at `hermes.luna.local`. `/var/run/docker.sock` is never mounted.
+State is `/var/lib/stacks/hermes` (isaac:users via `HERMES_UID`/`HERMES_GID`, 0700), including the `.env` holding every API key — deliberately **not** sops, see ADR 0007. Ports publish to `127.0.0.1` only; caddy fronts the dashboard (9119) at `hermes.luna.monkeymeat.xyz`. `/var/run/docker.sock` is never mounted.
 
-The **Hermes VM** (`modules/features/hermes-vm.nix`, ADR 0001) is deprecated and imported by nothing. Do not add it back, and never import it alongside `hermesContainer` — both declare `hermes.luna.local`, so it is an eval conflict. Rationale for the move: ADR `docs/adr/0007-hermes-agent-in-official-docker-image.md`. Avoid `microvm`, `hernes-vm`. See `CONTEXT.md` for the full glossary.
+The **Hermes VM** (`modules/features/hermes-vm.nix`, ADR 0001) is deprecated and imported by nothing. Do not add it back, and never import it alongside `hermesContainer` — both declare the `hermes` lanVhost, so it is an eval conflict. Rationale for the move: ADR `docs/adr/0007-hermes-agent-in-official-docker-image.md`. Avoid `microvm`, `hernes-vm`. See `CONTEXT.md` for the full glossary.
 
 ## Secrets
 
