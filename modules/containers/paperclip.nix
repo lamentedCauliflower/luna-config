@@ -19,6 +19,33 @@
       # isaac on this host, who is in the docker group and so root in all but
       # name.
       user = "paperclip";
+      # Pinned to what NixOS first allocated on luna, because the dind
+      # sidecar's /etc/passwd below is rendered at build time.
+      uid = 987;
+      gid = 983;
+
+      # The dind sidecar runs as the same uid. Its test containers map onto a
+      # subordinate range of its own, clear of the 100000+ ranges NixOS hands
+      # normal users (isaac's rootless containers would share uids otherwise).
+      subidStart = 1000000000;
+      subidCount = 65536;
+      dindDataDir = "/var/lib/${dir}-dind";
+
+      # The image's `rootless` user (uid 1000, which is isaac here) renamed to
+      # ours. Only what the daemon resolves: itself, root and nobody.
+      dindPasswd = pkgs.writeText "paperclip-dind-passwd" ''
+        root:x:0:0:root:/root:/bin/sh
+        nobody:x:65534:65534:nobody:/:/sbin/nologin
+        rootless:x:${toString uid}:${toString gid}:Rootless:/home/rootless:/bin/sh
+      '';
+      dindGroup = pkgs.writeText "paperclip-dind-group" ''
+        root:x:0:
+        nobody:x:65534:
+        rootless:x:${toString gid}:
+      '';
+      dindSubid = pkgs.writeText "paperclip-dind-subid" ''
+        rootless:${toString subidStart}:${toString subidCount}
+      '';
 
       # Its own bridge on a subnet outside 172.16/12, so caddy's lanVhosts gate
       # (which trusts docker bridges) 403s it too. The firewall chain below is
@@ -90,15 +117,31 @@
       virtualisation.docker.enable = true;
 
       users.users.${user} = {
+        inherit uid;
         isSystemUser = true;
         group = user;
+        # Reserves the range on the host too; the sidecar reads its own copy.
+        subUidRanges = [
+          {
+            startUid = subidStart;
+            count = subidCount;
+          }
+        ];
+        subGidRanges = [
+          {
+            startGid = subidStart;
+            count = subidCount;
+          }
+        ];
       };
-      users.groups.${user} = { };
+      users.groups.${user}.gid = gid;
 
       # 0700: holds the embedded Postgres, secrets/master.key (decrypts every
-      # key stored in the UI) and the CLIs' logins.
+      # key stored in the UI) and the CLIs' logins. The dind dir holds images
+      # and build cache only, so it is left out of the snapshots.
       systemd.tmpfiles.rules = [
         "d ${dataDir} 0700 ${user} ${user} -"
+        "d ${dindDataDir} 0700 ${user} ${user} -"
       ];
 
       sops.secrets.paperclipAuthSecret.restartUnits = [ "paperclip.service" ];
@@ -166,8 +209,8 @@
             dns: [1.1.1.1, 8.8.8.8]
 
             environment:
-              USER_UID:
-              USER_GID:
+              USER_UID: "${toString uid}"
+              USER_GID: "${toString gid}"
               HOST: "0.0.0.0"
               PAPERCLIP_DEPLOYMENT_MODE: authenticated
               PAPERCLIP_DEPLOYMENT_EXPOSURE: private
@@ -180,7 +223,7 @@
               DOCKER_CLI_PLUGIN_DIRS: ${cliPlugins}
               # Ryuk mounts the daemon's socket; rootless keeps it here, not at
               # /var/run/docker.sock.
-              TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /run/user/1000/docker.sock
+              TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE: /run/user/${toString uid}/docker.sock
 
             env_file:
               - path: ${config.sops.templates."paperclip.env".path}
@@ -212,9 +255,9 @@
           # through the same firewall chain as the agents', and their published
           # ports answer at dind:<port>, which is what testcontainers expects.
           #
-          # Rootless and not --privileged. The daemon runs as the image's uid
-          # 1000 inside its own user namespace, so root in a test container is
-          # a subuid, not root here. What it needs instead: namespace creation
+          # Rootless and not --privileged. The daemon runs as ${user}, the same
+          # uid as Paperclip, inside its own user namespace, so root in a test
+          # container is a subuid, not root here. What it needs: namespace creation
           # (seccomp), mounting its own /proc (systempaths), tun for its network
           # and fuse for storage. Docker's default caps stay, since newuidmap
           # carries SETUID/SETGID file caps that a cap_drop would refuse to exec.
@@ -226,6 +269,7 @@
             image: docker:dind-rootless
             container_name: paperclip-dind
             restart: unless-stopped
+            user: "${toString uid}:${toString gid}"
             environment:
               DOCKER_TLS_CERTDIR: ""
               # Without its own pid namespace, rootlesskit inherits every
@@ -242,17 +286,17 @@
               - /dev/fuse
             dns: [1.1.1.1, 8.8.8.8]
             volumes:
-              - dind-data:/home/rootless/.local/share/docker
+              - ${dindPasswd}:/etc/passwd:ro
+              - ${dindGroup}:/etc/group:ro
+              - ${dindSubid}:/etc/subuid:ro
+              - ${dindSubid}:/etc/subgid:ro
+              - ${dindDataDir}:/home/rootless/.local/share/docker
             deploy:
               resources:
                 limits:
                   memory: 8G
                   cpus: "4.0"
                   pids: 4096
-
-        # Images and build cache only; nothing worth a snapshot.
-        volumes:
-          dind-data: {}
       '';
 
       # Egress sandbox: the internet stays open (model APIs, npm/pip, web), but
@@ -313,8 +357,7 @@
         '';
 
         script = ''
-          USER_UID=$(id -u ${user}) USER_GID=$(id -g ${user}) \
-            docker compose -f ${composeFile} up --remove-orphans
+          docker compose -f ${composeFile} up --remove-orphans
         '';
 
         preStop = ''
