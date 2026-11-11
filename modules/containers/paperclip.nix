@@ -216,6 +216,13 @@
               PAPERCLIP_DEPLOYMENT_EXPOSURE: private
               # Also the auth base URL and the allowed-hostname default.
               PAPERCLIP_PUBLIC_URL: https://paperclip.${config.hostConfig.lanVhosts.httpsDomain}
+              # What agents call back on. Unset, it defaults to the public URL
+              # above, which agents can neither resolve (public DNS, the name
+              # lives in pihole) nor reach (the firewall drops luna's own
+              # addresses). They share the server's container, so loopback;
+              # 127.0.0.1 not localhost, which may try ::1 against an
+              # IPv4-only listener. The hostname guard always admits it.
+              PAPERCLIP_API_URL: http://127.0.0.1:3100
               # caddy arrives through docker-proxy, i.e. from the gateway.
               TRUST_PROXY: ${gateway}
               DOCKER_HOST: tcp://dind:2375
