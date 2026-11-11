@@ -9,6 +9,7 @@
       imports = [
         self.nixosModules.dockerMediaStack
         self.nixosModules.docker
+        self.nixosModules.dockerAutoUpdate
         self.nixosModules.piholeContainer
         # Obselete
         # self.nixosModules.frigateContainer
