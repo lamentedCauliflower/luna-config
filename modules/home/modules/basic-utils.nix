@@ -5,7 +5,10 @@
     {
       services.kdeconnect.enable = true;
 
-      programs.kitty.enable = true;
+      programs.kitty = {
+        enable = true;
+        settings.enable_audio_bell = false;
+      };
       # Enabling keepassxc also links its native messaging manifest into
       # chromium and librewolf, which is the other half of the KeePassXC-Browser
       # extension those modules force-install. The matching "Enable browser
