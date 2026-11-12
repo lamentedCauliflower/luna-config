@@ -16,6 +16,10 @@ _Avoid_: treating a profile as a deployment unit; two gateway processes sharing 
 The retired Debian virtual machine on lunaServer that used to run the Hermes Agent gateway. Deprecated by docs/adr/0007; `modules/features/hermes-vm.nix` still exists but no host imports it, and it survives only until its qcow2 is drained.
 _Avoid_: using it for the current deployment — that is the **Hermes Stack**; also microvm, hernes-vm.
 
+**Paperclip VM**:
+The NixOS microVM on lunaServer (microvm.nix, `nixosModules.paperclipVm`) running the Paperclip server and, as its subprocesses, every Paperclip agent. Its state is the host's `/var/lib/stacks/paperclip`, shared in at `/paperclip`. See docs/adr/0009.
+_Avoid_: "the paperclip container" — the docker stack it replaced; confusing it with the **Hermes VM**, which is a different, retired libvirt guest.
+
 **Secret**:
 A credential (password, API key, sync key) that must never appear in the git repo unencrypted nor in any host's world-readable nix store.
 _Avoid_: calling nix-store-visible values "secrets" — once interpolated into a built config they are public to every local user.

@@ -60,7 +60,7 @@ Hermes Agent runs as a docker compose stack from the upstream `nousresearch/herm
 
 State is `/var/lib/stacks/hermes` (isaac:users via `HERMES_UID`/`HERMES_GID`, 0700), including the `.env` holding every API key — deliberately **not** sops, see ADR 0007. Ports publish to `127.0.0.1` only; caddy fronts the dashboard (9119) at `hermes.luna.monkeymeat.xyz`. `/var/run/docker.sock` is never mounted.
 
-The **Hermes VM** (`modules/features/hermes-vm.nix`, ADR 0001) is deprecated and imported by nothing. Do not add it back, and never import it alongside `hermesContainer` — both declare the `hermes` lanVhost, so it is an eval conflict. Rationale for the move: ADR `docs/adr/0007-hermes-agent-in-official-docker-image.md`. Avoid `microvm`, `hernes-vm`. See `CONTEXT.md` for the full glossary.
+The **Hermes VM** (`modules/features/hermes-vm.nix`, ADR 0001) is deprecated and imported by nothing. Do not add it back, and never import it alongside `hermesContainer` — both declare the `hermes` lanVhost, so it is an eval conflict. Rationale for the move: ADR `docs/adr/0007-hermes-agent-in-official-docker-image.md`. Don't call Hermes `microvm` or `hernes-vm`: the one microVM on luna is the **Paperclip VM** (`features/paperclip-vm.nix`, ADR 0009). See `CONTEXT.md` for the full glossary.
 
 ## Secrets
 

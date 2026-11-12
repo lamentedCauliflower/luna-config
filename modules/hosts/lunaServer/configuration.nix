@@ -37,6 +37,7 @@
         self.nixosModules.syncthing
 
         self.nixosModules.honcho
+        self.nixosModules.paperclipVm
         self.nixosModules.taskchampionSyncServer
 
       ];

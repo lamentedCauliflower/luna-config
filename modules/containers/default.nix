@@ -19,7 +19,6 @@
         self.nixosModules.octoprintContainer
         self.nixosModules.giteaContainer
         self.nixosModules.hermesContainer
-        self.nixosModules.paperclipContainer
         self.nixosModules.minecraftContainer
       ];
 
