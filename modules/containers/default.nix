@@ -16,7 +16,7 @@
         # self.nixosModules.rommContainer
         # self.nixosModules.litellmContainer
         # self.nixosModules.fourgetContainer # 4get dead, back to google
-        self.nixosModules.octoprintContainer
+        # self.nixosModules.octoprintContainer # unused on luna
         self.nixosModules.giteaContainer
         self.nixosModules.hermesContainer
         self.nixosModules.minecraftContainer
