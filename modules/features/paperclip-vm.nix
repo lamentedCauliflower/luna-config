@@ -150,7 +150,7 @@
             "1.1.1.1"
             "8.8.8.8"
           ];
-          networking.dhcpcd.extraConfig = "nohook resolv.conf";
+          systemd.network.networks."99-ethernet-default-dhcp".dhcpV4Config.UseDNS = false;
           networking.hosts."127.0.0.1" = [ "dind" ];
           networking.firewall.allowedTCPPorts = [
             port
@@ -302,8 +302,11 @@
                 "+${pkgs.coreutils}/bin/install -D -m 0400 -o ${user} -g ${user} %d/gitea-token ${giteaTokenPath}"
               ];
               Restart = "always";
-              # The first start of a version runs npm install.
-              TimeoutStartSec = 900;
+              # The first start of a version runs npm install: 12 minutes on
+              # 2026.1106.0 over SLiRP. npm skips the dependencies' install
+              # scripts; none is needed (embedded Postgres links its libs at
+              # start, the rest serve adapters luna doesn't use).
+              TimeoutStartSec = 1800;
               # Embedded Postgres needs time to shut down cleanly.
               TimeoutStopSec = 90;
             };
