@@ -11,10 +11,30 @@
       port = 3100;
       sshPort = 2222;
 
-      # Paperclip's npm release. Same build as the docker image tag of that
-      # version; bump it to upgrade. The embedded Postgres in the data dir must
-      # stay on the major this release ships (18).
-      version = "2026.1106.0";
+      # Paperclip is upstream's image's /app, copied out on luna and run in the
+      # guest. Not the npm package: that skips the pnpm patches and overrides
+      # upstream ships (claude-agent-acp's isolation, its SDK pin, acpx,
+      # embedded-postgres), and the unpinned SDK's bundled Claude Code was too
+      # old for current models. Bump tag and digest together to upgrade; the
+      # embedded Postgres in the data dir must stay on the major (18).
+      image = "ghcr.io/paperclipai/paperclip:2026.1106.0@sha256:d6584f05cf57a4b26c117eb083725f18c1fe69ddafa7d16c9f8cce83f6fa17da";
+      app = "${dataDir}/.app";
+      # Root on luna, with the VM down. luna's docker already caches the image.
+      installApp = pkgs.writeShellScript "paperclip-install-app" ''
+        set -eu
+        PATH=${lib.makeBinPath [ config.virtualisation.docker.package pkgs.coreutils ]}
+        [ "$(cat ${app}/.image 2>/dev/null)" = ${image} ] && exit 0
+        docker pull -q ${image}
+        id=$(docker create ${image})
+        trap 'docker rm -f "$id" >/dev/null' EXIT
+        rm -rf ${app}.new
+        docker cp "$id:/app" ${app}.new
+        # Embedded Postgres links its libs inside its package at every start.
+        chown -R ${toString uid}:${toString gid} ${app}.new
+        echo ${image} > ${app}.new/.image
+        rm -rf ${app}
+        mv ${app}.new ${app}
+      '';
 
       # The ids the docker stack wrote the data dir with. The share passes them
       # through unchanged, so the guest user must keep them.
@@ -233,7 +253,9 @@
           # environment's PATH starts with /usr/local/bin, the gitea Tools
           # connection runs /usr/local/bin/gitea-mcp, and
           # TESTCONTAINERS_DOCKER_SOCKET_OVERRIDE names the rootless socket.
+          # /app: the image's runtime bundle hardcodes paths under it.
           systemd.tmpfiles.rules = [
+            "L+ /app - - - - /paperclip/.app"
             "L+ /usr/local/bin - - - - /run/current-system/sw/bin"
             "d /run/user/${toString uid} 0700 ${user} ${user} -"
             "L+ /run/user/${toString uid}/docker.sock - - - - /run/docker.sock"
@@ -272,24 +294,12 @@
               TRUST_PROXY = gateway;
             };
 
-            # Installed into the data dir on the first start of each version,
-            # built aside and swapped in so a failed install keeps the old one.
-            preStart = ''
-              app=/paperclip/.app
-              if [ "$(cat "$app/version" 2>/dev/null)" != ${version} ]; then
-                rm -rf "$app.new"
-                ${pkgs.nodejs_24}/bin/npm install --prefix "$app.new" --omit=dev --no-audit --no-fund \
-                  @paperclipai/server@${version}
-                echo ${version} > "$app.new/version"
-                rm -rf "$app"
-                mv "$app.new" "$app"
-              fi
-            '';
+            # The image's CMD, from its WORKDIR.
             script = ''
               export BETTER_AUTH_SECRET="$(cat "$CREDENTIALS_DIRECTORY/auth-secret")"
               export PAPERCLIP_TOOL_ACTION_SIGNING_SECRET="$(cat "$CREDENTIALS_DIRECTORY/tool-action-signing-secret")"
-              cd /paperclip/.app/node_modules/@paperclipai/server
-              exec ${pkgs.nodejs_24}/bin/node dist/index.js
+              cd /app
+              exec ${pkgs.nodejs_24}/bin/node server/dist-runtime/index.mjs
             '';
 
             unitConfig.RequiresMountsFor = "/paperclip";
@@ -302,11 +312,6 @@
                 "+${pkgs.coreutils}/bin/install -D -m 0400 -o ${user} -g ${user} %d/gitea-token ${giteaTokenPath}"
               ];
               Restart = "always";
-              # The first start of a version runs npm install: 12 minutes on
-              # 2026.1106.0 over SLiRP. npm skips the dependencies' install
-              # scripts; none is needed (embedded Postgres links its libs at
-              # start, the rest serve adapters luna doesn't use).
-              TimeoutStartSec = 1800;
               # Embedded Postgres needs time to shut down cleanly.
               TimeoutStopSec = 90;
             };
@@ -315,8 +320,15 @@
 
       systemd.services."microvm@${name}" = {
         unitConfig.RequiresMountsFor = snapDir;
+        wants = [ "docker.service" ];
+        after = [ "docker.service" ];
         serviceConfig = {
-          ExecStartPre = [ "+${snapshot}" ];
+          ExecStartPre = [
+            "+${snapshot}"
+            "+${installApp}"
+          ];
+          # A version bump pulls the whole image (about 12 GB) first.
+          TimeoutStartSec = 1800;
           # Covers the guest's 90s Paperclip stop plus shutdown.
           TimeoutStopSec = 150;
         };
