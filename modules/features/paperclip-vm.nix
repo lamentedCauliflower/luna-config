@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ self, inputs, ... }:
 {
   # Paperclip and its agents in a NixOS microVM, so agents get nix, devenv and
   # a real docker daemon. Why a VM and not the docker stack it replaces:
@@ -221,17 +221,11 @@
             ];
           };
 
+          imports = [ self.nixosModules.agentTools ];
           environment.systemPackages = with pkgs; [
-            curl
             devenv
             direnv
-            gh
-            git
             gitea-mcp-server
-            nodejs_24
-            python3
-            ripgrep
-            wget
             inputs.claude-code.packages.${pkgs.stdenv.hostPlatform.system}.default
           ];
 
@@ -299,7 +293,7 @@
               export BETTER_AUTH_SECRET="$(cat "$CREDENTIALS_DIRECTORY/auth-secret")"
               export PAPERCLIP_TOOL_ACTION_SIGNING_SECRET="$(cat "$CREDENTIALS_DIRECTORY/tool-action-signing-secret")"
               cd /app
-              exec ${pkgs.nodejs_24}/bin/node server/dist-runtime/index.mjs
+              exec ${pkgs.nodejs}/bin/node server/dist-runtime/index.mjs
             '';
 
             unitConfig.RequiresMountsFor = "/paperclip";
