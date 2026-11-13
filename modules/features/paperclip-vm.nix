@@ -202,6 +202,10 @@
               user
             ];
           };
+          # `nix shell nixpkgs#x` and <nixpkgs> resolve to the guest's own
+          # nixpkgs: no channel download, and the store image already holds
+          # much of what they need. microvm doesn't set this as nixosSystem does.
+          nixpkgs.flake.source = inputs.nixpkgs;
           nix.gc = {
             automatic = true;
             options = "--delete-older-than 7d";
