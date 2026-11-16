@@ -230,7 +230,9 @@
             devenv
             direnv
             gitea-mcp-server
+            inputs.open-code.packages.${pkgs.stdenv.hostPlatform.system}.opencode
             inputs.claude-code.packages.${pkgs.stdenv.hostPlatform.system}.default
+            pi-coding-agent
           ];
 
           # git reads /etc/gitconfig whatever env Paperclip hands an agent. The
