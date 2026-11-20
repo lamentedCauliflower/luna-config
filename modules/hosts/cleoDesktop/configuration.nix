@@ -34,6 +34,7 @@
         self.nixosModules.minecraft
         self.nixosModules.votv
         self.nixosModules.starsector
+        self.nixosModules.creamapi
 
         self.nixosModules.nfsMount
         self.nixosModules.hyprland

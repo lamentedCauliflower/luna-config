@@ -71,6 +71,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # CreamLinux ships default.nix/package.nix, not a flake, so it is consumed
+    # with `import` (see features/games/creamapi.nix).
+    creamlinux = {
+      url = "github:Novattz/creamlinux-installer";
+      flake = false;
+    };
+
   };
 
   outputs =

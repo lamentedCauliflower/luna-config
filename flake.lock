@@ -89,6 +89,22 @@
         "type": "github"
       }
     },
+    "creamlinux": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1793401197,
+        "narHash": "sha256-78NexMKBlJltCGb1qDK4B2kYNMdVAWNxgSUDnNjOJhM=",
+        "owner": "Novattz",
+        "repo": "creamlinux-installer",
+        "rev": "ff6bb7f6aab437a387c35943a363c0b8dce783b0",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Novattz",
+        "repo": "creamlinux-installer",
+        "type": "github"
+      }
+    },
     "firefox-gnome-theme": {
       "flake": false,
       "locked": {
@@ -757,6 +773,7 @@
     "root": {
       "inputs": {
         "claude-code": "claude-code",
+        "creamlinux": "creamlinux",
         "flake-parts": "flake-parts",
         "hermes-agent": "hermes-agent",
         "home-manager": "home-manager_2",
