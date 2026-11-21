@@ -38,6 +38,7 @@
 
         self.nixosModules.honcho
         self.nixosModules.paperclipVm
+        self.nixosModules.ferromancer
         self.nixosModules.taskchampionSyncServer
 
       ];

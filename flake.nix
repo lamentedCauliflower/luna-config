@@ -71,6 +71,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    ferromancer = {
+      url = "git+https://gitea.luna.monkeymeat.xyz/isaac/ferromancer";
+      # nixpkgs deliberately not followed: the VM runs on Ferromancer's own
+      # pin (see features/ferromancer.nix). microvm is, so there is one host module.
+      inputs.microvm.follows = "microvm";
+    };
+
     # CreamLinux ships default.nix/package.nix, not a flake, so it is consumed
     # with `import` (see features/games/creamapi.nix).
     creamlinux = {
