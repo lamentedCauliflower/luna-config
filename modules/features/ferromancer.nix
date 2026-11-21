@@ -30,9 +30,9 @@
           passwordFile = "/run/secrets/ferromancerOperatorPassword";
         };
         providers.deepseek.apiKeyFile = "/run/secrets/ferromancerDeepseekKey";
-        agents.dev = {
-          role = "implementer";
-          description = "Implements tickets on DeepSeek.";
+        agents.owner = {
+          role = "owner";
+          description = "Owns the Ferro: specs and grills ideas on DeepSeek.";
           model = "deepseek/deepseek-flash";
           thinking = "max";
         };
