@@ -9,7 +9,10 @@
     {
       imports = [ inputs.ferromancer.nixosModules.default ];
 
-      sops.secrets.ferromancerOperatorPassword = { };
+      sops.secrets = {
+        ferromancerOperatorPassword = { };
+        ferromancerDeepseekKey = { };
+      };
 
       # The VM runs on the nixpkgs Ferromancer is tested against (its gt needs
       # a newer Go than luna's), not luna's. A bump of that pin starts a fresh
@@ -26,8 +29,13 @@
           email = "isaac.birchall@googlemail.com";
           passwordFile = "/run/secrets/ferromancerOperatorPassword";
         };
-        # Providers and Agents: add a sops key per provider (apiKeyFile under
-        # /run/secrets), then services.ferromancer.agents.<name>.
+        providers.deepseek.apiKeyFile = "/run/secrets/ferromancerDeepseekKey";
+        agents.dev = {
+          role = "implementer";
+          description = "Implements tickets on DeepSeek.";
+          model = "deepseek/deepseek-flash";
+          thinking = "max";
+        };
       };
 
       # Hosts' br0 is already trusted; this covers tailscale clients too.
