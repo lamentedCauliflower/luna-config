@@ -37,7 +37,8 @@
         self.nixosModules.syncthing
 
         self.nixosModules.honcho
-        self.nixosModules.paperclipVm
+        # Disabled: replaced by ferromancer. Data stays in /var/lib/stacks/paperclip.
+        # self.nixosModules.paperclipVm
         self.nixosModules.ferromancer
         self.nixosModules.taskchampionSyncServer
 
