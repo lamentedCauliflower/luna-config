@@ -2,10 +2,14 @@
 {
   # Ferromancer (gitea.luna.monkeymeat.xyz/isaac/ferromancer): a code factory
   # in its own microVM with its own private Gitea, separate from the docker
-  # Gitea. Reached over plain http on `port`: the VM pins that URL into
-  # Gitea's ROOT_URL (clone URLs, OIDC), so it is not fronted by caddy.
+  # Gitea. Fronted by caddy (LAN-only, https); the VM's own forward is
+  # loopback-only and ROOT_URL is forced to the caddy name.
   flake.nixosModules.ferromancer =
-    { pkgs, ... }:
+    { config, lib, pkgs, ... }:
+    let
+      port = 8081;
+      host = "ferromancer.${config.hostConfig.lanVhosts.httpsDomain}";
+    in
     {
       imports = [ inputs.ferromancer.nixosModules.default ];
 
@@ -22,8 +26,8 @@
 
       services.ferromancer = {
         enable = true;
-        address = "ferromancer.luna.monkeymeat.xyz"; # pihole wildcard -> luna
-        port = 8081; # 80 is caddy's
+        address = host;
+        inherit port;
         operator = {
           username = "isaac";
           email = "isaac.birchall@googlemail.com";
@@ -38,7 +42,24 @@
         };
       };
 
-      # Hosts' br0 is already trusted; this covers tailscale clients too.
-      networking.firewall.allowedTCPPorts = [ 8081 ];
+      # The module pins ROOT_URL to http://address:port (clone URLs, login
+      # redirects); browsers arrive via caddy on https with no port, and Gitea
+      # refuses a form POST whose Origin differs. The backend reaches Gitea on
+      # the guest's loopback, so only browsers and clone URLs see this.
+      microvm.vms.ferro.config = {
+        ferromancer.rootUrl = lib.mkForce "https://${host}/gitea/";
+        # Reached by caddy on luna only, not the LAN.
+        microvm.forwardPorts = lib.mkForce [
+          {
+            host = {
+              address = "127.0.0.1";
+              inherit port;
+            };
+            guest.port = 80;
+          }
+        ];
+      };
+
+      hostConfig.lanVhosts.services.ferromancer.upstream = "127.0.0.1:${toString port}";
     };
 }

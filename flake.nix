@@ -73,9 +73,8 @@
 
     ferromancer = {
       url = "git+https://gitea.luna.monkeymeat.xyz/isaac/ferromancer";
-      # nixpkgs not followed: only Ferromancer's own packages (backend, UI) use
-      # its pin; the VM guest runs on luna's nixpkgs, so keep that one current
-      # (its gt needs a recent Go). microvm is followed so there is one host module.
+      # nixpkgs not followed: the VM runs on Ferromancer's own pin (see
+      # features/ferromancer.nix). microvm is, so there is one host module.
       inputs.microvm.follows = "microvm";
     };
 
