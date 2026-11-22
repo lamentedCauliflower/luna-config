@@ -39,6 +39,7 @@
           description = "Owns the Ferro: specs and grills ideas on DeepSeek.";
           model = "deepseek/deepseek-flash";
           thinking = "max";
+          chat.enable = true;
         };
       };
 
