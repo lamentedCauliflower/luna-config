@@ -45,7 +45,7 @@
           enable = true;
           theme = "darkblood";
           plugins = [
-            "github"
+            "gh"
             "git"
             "tailscale"
             "sudo"
