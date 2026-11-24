@@ -9,6 +9,7 @@
         self.nixosModules.cleoDesktopHardware
 
         self.nixosModules.sopsBase
+        self.nixosModules.nixGc
 
         self.nixosModules.docker
         self.nixosModules.libVirt

@@ -9,6 +9,7 @@
         self.nixosModules.mewoSteamdeckHardware
 
         self.nixosModules.sopsBase
+        self.nixosModules.nixGc
 
         self.nixosModules.sshServer
         self.nixosModules.tailscale

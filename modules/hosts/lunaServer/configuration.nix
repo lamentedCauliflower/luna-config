@@ -13,6 +13,7 @@
         self.nixosModules.lunaServerHardware
 
         self.nixosModules.sopsBase
+        self.nixosModules.nixGc
 
         self.nixosModules.autoUpdate
 
