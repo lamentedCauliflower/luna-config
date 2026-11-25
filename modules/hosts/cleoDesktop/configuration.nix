@@ -108,9 +108,9 @@
           enable = true;
           extraEntries = ''
             /Windows Boot Manager
-                comment: Chainload the EFI loader on the second NVMe
+                comment: Chainload the EFI loader on the SATA disk (sda1)
                 protocol: efi
-                path: guid(a3d03aeb-5139-44bf-8b82-0e27ee09f133):/EFI/Microsoft/Boot/bootmgfw.efi
+                path: guid(4923f58f-dc88-4d4b-b0d4-86842066deba):/EFI/Microsoft/Boot/bootmgfw.efi
           '';
           force = true;
           efiSupport = true;
