@@ -89,6 +89,21 @@
         "type": "github"
       }
     },
+    "crane": {
+      "locked": {
+        "lastModified": 1794962885,
+        "narHash": "sha256-zrweT2tXbcWiJMACOhOr2eYFJKVa6g59ouRaZ3BS5Do=",
+        "owner": "ipetkov",
+        "repo": "crane",
+        "rev": "95e62def851e9d650f0eab63cb4f59a3306e20bd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "ipetkov",
+        "repo": "crane",
+        "type": "github"
+      }
+    },
     "creamlinux": {
       "flake": false,
       "locked": {
@@ -107,17 +122,18 @@
     },
     "ferromancer": {
       "inputs": {
+        "crane": "crane",
         "microvm": [
           "microvm"
         ],
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1795309891,
-        "narHash": "sha256-VYURAeL3+bOyqBepu5bX/cDBafx+MmIUALzMqtWW4ik=",
+        "lastModified": 1795676302,
+        "narHash": "sha256-uPrGVUk0fpuaul14UjQH3T4mAY1GMa8CmlYSsg4BXfc=",
         "ref": "refs/heads/main",
-        "rev": "74f8fcad2f740207500a54fadcca675f1782901b",
-        "revCount": 168,
+        "rev": "74604284b725a0f2b3624072c78f842ae282104d",
+        "revCount": 246,
         "type": "git",
         "url": "https://gitea.luna.monkeymeat.xyz/isaac/ferromancer"
       },
