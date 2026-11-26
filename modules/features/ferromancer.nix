@@ -88,8 +88,7 @@
               skills = [ research ];
               dailyCostCap = 30;
               prompt = ''
-                Split each PRD into its data side and its backend side: assign data work to orion
-                and backend work to ferris. Propose, with research behind it, before you decide.
+                Data PRDs go to orion, backend PRDs to ferris. Propose, with research behind it, before you decide.
               '';
             };
 
@@ -186,6 +185,10 @@
               thinking = "high";
               extensions = [ anthropicAuth ];
               reportsTo = "arlo";
+              prompt = ''
+                Your pull requests change documentation only, so skip test-first; check that every
+                command and path you document exists in the repository.
+              '';
             };
           };
       };
