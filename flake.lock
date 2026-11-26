@@ -129,11 +129,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1795694569,
-        "narHash": "sha256-pbrhBnXR0uQgawpjGz4aXyr89yl+luVRUz47yRe0GSA=",
+        "lastModified": 1795714789,
+        "narHash": "sha256-Gy9zW9VR4SB59lyuOdS5Pp1ZL19BorttxWjQI54Bf+4=",
         "ref": "refs/heads/main",
-        "rev": "6e066920aee17daeebed4a25795e915927f1d454",
-        "revCount": 249,
+        "rev": "8a9d05efe1b43965ef6575238584cc85dccd0abf",
+        "revCount": 254,
         "type": "git",
         "url": "https://gitea.luna.monkeymeat.xyz/isaac/ferromancer"
       },

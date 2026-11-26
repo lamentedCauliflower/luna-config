@@ -171,6 +171,7 @@
               model = "deepseek/deepseek-flash";
               thinking = "high";
               reportsTo = "arlo";
+              skills = [ { builtin = "code-review"; } ];
               tools.exclude = [ "edit" "write" ];
               prompt = ''
                 Review code quality only: correctness, tests, clarity, and code that need not exist.
