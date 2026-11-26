@@ -85,7 +85,6 @@
               thinking = "xhigh";
               extensions = [ anthropicAuth ];
               chat.enable = true;
-              subagent.enable = true;
               skills = [ research ];
               dailyCostCap = 30;
               prompt = ''
@@ -102,7 +101,6 @@
               thinking = "high";
               extensions = [ anthropicAuth ];
               reportsTo = "arlo";
-              subagent.enable = true;
               skills = [ research ];
               dailyCostCap = 20;
               prompt = ''
@@ -120,7 +118,6 @@
               thinking = "high";
               extensions = [ anthropicAuth ];
               reportsTo = "arlo";
-              subagent.enable = true;
               skills = [ research ];
               dailyCostCap = 20;
               prompt = ''
